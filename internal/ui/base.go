@@ -1,8 +1,9 @@
-package models
+package ui
 
 import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/martijnspitter/tui-todo/internal/service"
 )
 
 type BaseModel struct {
@@ -10,8 +11,8 @@ type BaseModel struct {
 	content  tea.Model
 }
 
-func NewBaseModel() *BaseModel {
-	todoModel := NewTodoModel()
+func NewBaseModel(service *service.AppService) *BaseModel {
+	todoModel := NewTodoModel(service)
 	toastOverlay := NewToastOverlay(todoModel)
 	return &BaseModel{
 		content: toastOverlay,

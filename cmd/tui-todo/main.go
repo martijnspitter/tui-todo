@@ -5,8 +5,13 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/log"
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/martijnspitter/tui-todo/internal/logger"
-	"github.com/martijnspitter/tui-todo/internal/models"
+	"github.com/martijnspitter/tui-todo/internal/repository"
+	"github.com/martijnspitter/tui-todo/internal/service"
+	"github.com/martijnspitter/tui-todo/internal/ui"
 )
 
 func main() {
@@ -15,7 +20,16 @@ func main() {
 		defer logger.Close()
 	}
 
-	baseModel := models.NewBaseModel()
+	todoRepo, err := repository.NewSQLiteTodoRepository()
+	if err != nil {
+		log.Error("Failed to start db", err)
+		os.Exit(1)
+	}
+	defer todoRepo.Close()
+
+	service := service.NewAppService(todoRepo)
+
+	baseModel := ui.NewBaseModel(service)
 
 	// Initialize TUI with endpoints as options
 	p := tea.NewProgram(

@@ -9,6 +9,7 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.4
 	github.com/charmbracelet/lipgloss v1.0.0
 	github.com/charmbracelet/log v0.4.1
+	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/rmhubbert/bubbletea-overlay v0.3.2
 )
 

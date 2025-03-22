@@ -1,48 +1,60 @@
 package models
 
-import (
-	"github.com/charmbracelet/bubbles/key"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/martijnspitter/tui-todo/internal/service"
+import "time"
+
+type Status int
+
+func (s Status) String() string {
+	switch s {
+	case Open:
+		return "Open"
+	case Doing:
+		return "Doing"
+	case Done:
+		return "Done"
+	case Archived:
+		return "Archived"
+	default:
+		return "Unknown"
+	}
+}
+
+const (
+	Open Status = iota
+	Doing
+	Done
+	Archived
 )
 
-type TodoModel struct {
-	tuiService *service.TuiService
-	quiting    bool
-}
+type Priority int
 
-func NewTodoModel() *TodoModel {
-	tuiService := service.NewTuiService()
-	return &TodoModel{
-		tuiService: tuiService,
+func (p Priority) String() string {
+	switch p {
+	case Low:
+		return "Low"
+	case Medium:
+		return "Medium"
+	case High:
+		return "High"
+	default:
+		return "Unknown"
 	}
 }
 
-func (m *TodoModel) Init() tea.Cmd {
-	return nil
-}
+const (
+	Low Priority = iota
+	Medium
+	High
+)
 
-func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch {
-		case key.Matches(
-			msg,
-			m.tuiService.KeyMap.Quit,
-		):
-			m.quiting = true
-			return m, tea.Quit
-		}
-	}
-
-	return m, nil
-}
-
-func (m *TodoModel) View() string {
-	if m.quiting {
-		return ""
-	}
-
-	return "Hello World"
+type Todo struct {
+	ID          int64
+	Title       string
+	Description string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DueDate     *time.Time
+	Status      Status
+	Priority    Priority
+	Tags        []string
 }
