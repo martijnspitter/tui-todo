@@ -3,22 +3,33 @@ package styling
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	BrandColorLight = lipgloss.Color("#2A9D8F")
-	BrandColor      = lipgloss.Color("#3D7068")
-	HighlightColor  = lipgloss.Color("#2A9D8F")
+	BrandColor     = lipgloss.Color("#cba6f7")
+	HighlightColor = lipgloss.Color("#fab387")
 
-	TextColor            = lipgloss.Color("#EEF0F2")
-	PlaceholderTextColor = lipgloss.Color("#888")
+	OpenStatusColor     = lipgloss.Color("#f5e0dc")
+	DoingStatusColor    = lipgloss.Color("#89b4fa")
+	DoneStatusColor     = lipgloss.Color("#a6e3a1")
+	ArchivedStatusColor = lipgloss.Color("#9399b2")
 
-	InfoColor    = lipgloss.Color("#5386E4")
-	WarningColor = lipgloss.Color("#FF7F11")
-	ErrorColor   = lipgloss.Color("#FF1B1C")
-	SuccessColor = lipgloss.Color("#3D7068")
+	LowPriorityColor    = lipgloss.Color("#94e2d5")
+	MediumPriorityColor = lipgloss.Color("#fab387")
+	HighPriorityColor   = lipgloss.Color("#f38ba8")
 
-	FocusedStyle = lipgloss.NewStyle().Foreground(HighlightColor)
-	HoverStyle   = lipgloss.NewStyle().Foreground(BrandColorLight)
+	WhiteColor = lipgloss.Color("#fff")
+	BlackColor = lipgloss.Color("#11111b")
+
+	TextColor       = lipgloss.Color("#cdd6f4")
+	SubtextColor    = lipgloss.Color("#a6adc8")
+	BackgroundColor = lipgloss.Color("#313244")
+
+	InfoColor    = lipgloss.Color("#186ddd")
+	WarningColor = lipgloss.Color("#ff7c03")
+	ErrorColor   = lipgloss.Color("#d13523")
+	SuccessColor = lipgloss.Color("#1b7e41")
+
+	FocusedStyle = lipgloss.NewStyle().Foreground(BrandColor)
+	HoverStyle   = lipgloss.NewStyle().Foreground(HighlightColor)
 
 	BorderWidth = 1
-	PaddingX    = 1
-	PaddingY    = 1
+	Padding     = 1
 )
