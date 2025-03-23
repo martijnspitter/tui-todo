@@ -3,17 +3,17 @@ package styling
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	BrandColorLight = lipgloss.Color("#7269b0")
-	BrandColor      = lipgloss.Color("#3c327f")
-	HighlightColor  = lipgloss.Color("#f7c76e")
+	BrandColorLight = lipgloss.Color("#2A9D8F")
+	BrandColor      = lipgloss.Color("#3D7068")
+	HighlightColor  = lipgloss.Color("#2A9D8F")
 
-	TextColor            = lipgloss.Color("#FFF")
+	TextColor            = lipgloss.Color("#EEF0F2")
 	PlaceholderTextColor = lipgloss.Color("#888")
 
-	InfoColor    = lipgloss.Color("#186ddd")
-	WarningColor = lipgloss.Color("#ff7c03")
-	ErrorColor   = lipgloss.Color("#d13523")
-	SuccessColor = lipgloss.Color("#1b7e41")
+	InfoColor    = lipgloss.Color("#5386E4")
+	WarningColor = lipgloss.Color("#FF7F11")
+	ErrorColor   = lipgloss.Color("#FF1B1C")
+	SuccessColor = lipgloss.Color("#3D7068")
 
 	FocusedStyle = lipgloss.NewStyle().Foreground(HighlightColor)
 	HoverStyle   = lipgloss.NewStyle().Foreground(BrandColorLight)
