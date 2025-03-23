@@ -32,16 +32,10 @@ func (m *BaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds []tea.Cmd
 	)
 
-	// Update the content model first (which might generate toast messages)
 	m.content, cmd = m.content.Update(msg)
 	cmds = append(cmds, cmd)
 
-	// Then update the toast overlay, which can receive toast messages from the content
 	m.toastOverlay, cmd = m.toastOverlay.Update(msg)
-	cmds = append(cmds, cmd)
-
-	// Finally, update the viewport
-	m.viewport, cmd = m.viewport.Update(msg)
 	cmds = append(cmds, cmd)
 
 	switch msg := msg.(type) {
@@ -52,16 +46,8 @@ func (m *BaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.viewport.Width = viewportWidth
 		m.viewport.Height = viewportHeight
-
-		// After updating dimensions, refresh content
-		m.viewport.SetContent(m.toastOverlay.View())
-
-		m.content, cmd = m.content.Update(msg)
-		cmds = append(cmds, cmd)
-
-		// Update toast overlay with size
-		m.toastOverlay, cmd = m.toastOverlay.Update(msg)
-		cmds = append(cmds, cmd)
+		m.content.Update(msg)
+		m.toastOverlay.Update(msg)
 
 		m.ready = true
 	}

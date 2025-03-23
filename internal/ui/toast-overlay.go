@@ -12,7 +12,6 @@ type ToastOverlay struct {
 	content tea.Model
 	width   int
 	height  int
-	active  bool
 }
 
 func NewToastOverlay(content tea.Model) *ToastOverlay {
@@ -32,7 +31,6 @@ func NewToastOverlay(content tea.Model) *ToastOverlay {
 		toast:   toastModel,
 		overlay: overlayModel,
 		content: content,
-		active:  false,
 	}
 }
 
@@ -46,30 +44,18 @@ func (m *ToastOverlay) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds []tea.Cmd
 	)
 
-	// First, update the toast model
-	m.toast, cmd = m.toast.Update(msg)
-	cmds = append(cmds, cmd)
-
-	// Check if toast is active
-	if toastModel, ok := m.toast.(*ToastModel); ok {
-		m.active = toastModel.Active
-	}
-
-	// Then update the overlay with the same message
-	m.overlay, cmd = m.overlay.Update(msg)
-	cmds = append(cmds, cmd)
-
-	// Update content
-	m.content, cmd = m.content.Update(msg)
-	cmds = append(cmds, cmd)
-
-	// Handle window size for proper positioning
-	if msg, ok := msg.(tea.WindowSizeMsg); ok {
+	switch msg := msg.(type) {
+	case ToastMsg, DismissToastMsg:
+		m.toast, cmd = m.toast.Update(msg)
+		cmds = append(cmds, cmd)
+	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
 	}
 
-	// Return both commands
+	m.overlay, cmd = m.overlay.Update(msg)
+	cmds = append(cmds, cmd)
+
 	return m, tea.Batch(cmds...)
 }
 
