@@ -7,15 +7,18 @@ import (
 )
 
 type BaseModel struct {
-	viewport viewport.Model
-	content  tea.Model
+	viewport     viewport.Model
+	content      tea.Model
+	toastOverlay tea.Model
+	ready        bool
 }
 
 func NewBaseModel(service *service.AppService) *BaseModel {
 	todoModel := NewTodoModel(service)
 	toastOverlay := NewToastOverlay(todoModel)
 	return &BaseModel{
-		content: toastOverlay,
+		toastOverlay: toastOverlay,
+		content:      todoModel,
 	}
 }
 
@@ -29,9 +32,16 @@ func (m *BaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds []tea.Cmd
 	)
 
-	m.viewport, cmd = m.viewport.Update(msg)
-	cmds = append(cmds, cmd)
+	// Update the content model first (which might generate toast messages)
 	m.content, cmd = m.content.Update(msg)
+	cmds = append(cmds, cmd)
+
+	// Then update the toast overlay, which can receive toast messages from the content
+	m.toastOverlay, cmd = m.toastOverlay.Update(msg)
+	cmds = append(cmds, cmd)
+
+	// Finally, update the viewport
+	m.viewport, cmd = m.viewport.Update(msg)
 	cmds = append(cmds, cmd)
 
 	switch msg := msg.(type) {
@@ -44,12 +54,27 @@ func (m *BaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.viewport.Height = viewportHeight
 
 		// After updating dimensions, refresh content
-		m.viewport.SetContent(m.content.View())
+		m.viewport.SetContent(m.toastOverlay.View())
+
+		m.content, cmd = m.content.Update(msg)
+		cmds = append(cmds, cmd)
+
+		// Update toast overlay with size
+		m.toastOverlay, cmd = m.toastOverlay.Update(msg)
+		cmds = append(cmds, cmd)
+
+		m.ready = true
 	}
+
+	m.viewport.SetContent(m.toastOverlay.View())
 
 	return m, tea.Batch(cmds...)
 }
 
 func (m *BaseModel) View() string {
+	if !m.ready {
+		return "Initializing..."
+	}
+
 	return m.viewport.View()
 }
