@@ -77,6 +77,8 @@ func NewTodoModel(appService *service.AppService) *TodoModel {
 	delegate := list.NewDefaultDelegate()
 	todoList := list.New([]list.Item{}, delegate, 0, 0)
 	todoList.Title = ""
+	todoList.DisableQuitKeybindings()
+	todoList.SetShowTitle(false)
 	todoList.SetShowHelp(false)
 
 	// Create model
@@ -148,10 +150,22 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.quitting = true
 			return m, tea.Quit
 
+		case msg.String() == "1":
+			m.currentFilter = models.Open
+			return m, m.loadTodos()
+		case msg.String() == "2":
+			m.currentFilter = models.Doing
+			return m, m.loadTodos()
+		case msg.String() == "3":
+			m.currentFilter = models.Done
+			return m, m.loadTodos()
+		case msg.String() == "4":
+			m.currentFilter = models.Archived
+			return m, m.loadTodos()
+
 		case msg.String() == "tab":
 			// Cycle through filters
 			m.currentFilter = (m.currentFilter + 1) % 4
-			m.list.Title = fmt.Sprintf("Todos - %s", m.currentFilter.String())
 			return m, m.loadTodos()
 
 		case msg.String() == "enter":
@@ -259,7 +273,7 @@ func (m *TodoModel) View() string {
 	header := m.HeaderView()
 
 	// Main list
-	listView := lipgloss.NewStyle().Padding(styling.PaddingX).Render(m.list.View())
+	listView := lipgloss.NewStyle().Width(m.width).Padding(styling.Padding).Render(m.list.View())
 
 	// Input
 	inputView := fmt.Sprintf(
@@ -277,31 +291,72 @@ func (m *TodoModel) View() string {
 }
 
 func (m *TodoModel) HeaderView() string {
-	filterButtons := []string{}
-	smallLine := strings.Repeat("─", 2)
-	for i := models.Open; i <= models.Archived; i++ {
-		baseStyle := lipgloss.NewStyle()
+	statusColors := map[models.Status]lipgloss.Color{
+		models.Open:     styling.OpenStatusColor,
+		models.Doing:    styling.DoingStatusColor,
+		models.Done:     styling.DoneStatusColor,
+		models.Archived: styling.ArchivedStatusColor,
+	}
+
+	var tabs []string
+
+	// Create a tab for each status
+	for status := models.Open; status <= models.Archived; status++ {
+		// Number section (colored circle with status number)
+		statusColor := statusColors[status]
+
+		// Create indicator with number
+		indicator := lipgloss.NewStyle().
+			Foreground(styling.BlackColor).
+			Background(statusColor).
+			Padding(0, 1, 0, 0).
+			Bold(true).
+			Render(fmt.Sprintf("%d", status+1))
+
+		// Text section (status name)
 		var textStyle lipgloss.Style
-		if m.currentFilter == i {
-			textStyle = styling.FocusedStyle
+		var leftCapStyle lipgloss.Style
+		var rightCapStyle lipgloss.Style
+		if m.currentFilter == status {
+			// Active tab
+			textStyle = lipgloss.NewStyle().
+				Foreground(styling.BlackColor).
+				Background(statusColor).
+				Padding(0, 0)
+			leftCapStyle = lipgloss.NewStyle().
+				Foreground(statusColor).
+				Padding(0, 0)
+			rightCapStyle = lipgloss.NewStyle().
+				Foreground(statusColor).
+				Padding(0, 0).
+				MarginRight(2)
 		} else {
-			textStyle = lipgloss.NewStyle()
+			// Inactive tab
+			textStyle = lipgloss.NewStyle().
+				Foreground(styling.SubtextColor).
+				Background(styling.BackgroundColor).
+				Padding(0, 0)
+			leftCapStyle = lipgloss.NewStyle().
+				Foreground(statusColor).
+				Padding(0, 0)
+			rightCapStyle = lipgloss.NewStyle().
+				Foreground(styling.BackgroundColor).
+				Padding(0, 0).
+				MarginRight(2)
 		}
-		leftSide := fmt.Sprintf("%s[ ", smallLine)
-		rightSide := fmt.Sprintf(" ]%s", smallLine)
-		text := fmt.Sprintf("%d %s", i+1, i.String())
-		filterButtons = append(filterButtons, baseStyle.Render(leftSide), textStyle.Render(text), baseStyle.Render(rightSide))
+
+		statusText := textStyle.Render(" " + status.String())
+		leftCap := leftCapStyle.Render("")
+		rightCap := rightCapStyle.Render("")
+
+		// Combine indicator and text
+		tab := lipgloss.JoinHorizontal(lipgloss.Center, leftCap, indicator, statusText, rightCap)
+
+		tabs = append(tabs, tab)
 	}
 
-	buttons := ""
-
-	for _, b := range filterButtons {
-		buttons += b
-	}
-
-	line := strings.Repeat("─", m.width-lipgloss.Width(buttons))
-
-	return lipgloss.JoinHorizontal(lipgloss.Center, buttons, line)
+	// Join all tabs
+	return lipgloss.JoinHorizontal(lipgloss.Center, tabs...)
 }
 
 func truncateString(s string, length int) string {
