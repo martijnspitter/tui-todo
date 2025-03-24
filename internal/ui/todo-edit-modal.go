@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -18,8 +19,10 @@ type editState int
 const (
 	editingTitle editState = iota
 	editingDescription
-	editingPriority
 	editingTags
+	editingPriorityLow
+	editingPriorityMedium
+	editingPriorityHigh
 )
 
 // TodoEditModal allows viewing and editing todo details
@@ -33,9 +36,10 @@ type TodoEditModal struct {
 	width      int
 	height     int
 	appService *service.AppService
+	tuiService *service.TuiService
 }
 
-func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.AppService) *TodoEditModal {
+func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.AppService, tuiService *service.TuiService) *TodoEditModal {
 	ti := textinput.New()
 	ti.SetValue(todo.Title)
 	ti.Focus()
@@ -54,8 +58,9 @@ func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.
 		priority:   todo.Priority,
 		width:      width,
 		height:     height,
-		appService: appService,
 		editState:  editingTitle,
+		appService: appService,
+		tuiService: tuiService,
 	}
 }
 
@@ -68,28 +73,31 @@ func (m *TodoEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc":
+		switch {
+		case key.Matches(
+			msg,
+			m.tuiService.KeyMap.Quit,
+		):
 			// Close modal without saving
 			return m, func() tea.Msg { return modalCloseMsg{reload: false} }
 
-		case "tab":
+		case key.Matches(msg, m.tuiService.KeyMap.Next):
 			// Cycle through edit states
-			m.toggleFocus()
+			m.goForward()
+		case key.Matches(msg, m.tuiService.KeyMap.Prev):
+			// Cycle through edit states
+			m.goBack()
 
-		case "enter":
-			if m.editState == editingPriority {
-				// Cycle priority
-				m.priority = (m.priority + 1) % 3
-			} else if m.editState == editingTitle && m.titleInput.Value() == "" {
-				// Can't have empty title
-				return m, func() tea.Msg {
-					return todoErrorMsg{err: fmt.Errorf("title cannot be empty")}
-				}
+		case key.Matches(msg, m.tuiService.KeyMap.Select):
+			if m.editState == editingPriorityLow {
+				m.priority = models.Low
+			} else if m.editState == editingPriorityMedium {
+				m.priority = models.Medium
+			} else if m.editState == editingPriorityHigh {
+				m.priority = models.High
 			}
 
-		case "ctrl+s":
-			// Save changes
+		case key.Matches(msg, m.tuiService.KeyMap.AdvanceStatus):
 			return m, m.saveChangesCmd()
 		}
 
@@ -123,35 +131,20 @@ func (m *TodoEditModal) View() string {
 		Width(m.width / 2).
 		BorderForeground(styling.BrandColor)
 
-	// Status pill
-	statusStyle := lipgloss.NewStyle().
-		Padding(0, 1).
-		Bold(true).
-		Foreground(lipgloss.Color("#000"))
-
-	var statusColor lipgloss.Color
-	switch m.todo.Status {
-	case models.Open:
-		statusColor = lipgloss.Color("#AED6F1") // Light blue
-	case models.Doing:
-		statusColor = lipgloss.Color("#F9E79F") // Light yellow
-	case models.Done:
-		statusColor = lipgloss.Color("#ABEBC6") // Light green
-	case models.Archived:
-		statusColor = lipgloss.Color("#D4EFDF") // Very light green
-	}
-
-	statusPill := statusStyle.Copy().Background(statusColor).Render(m.todo.Status.String())
+	status := styling.GetStyledStatus(m.todo.Status, true, true)
 
 	// Priority display
-	priorityDisplay := "Priority: "
+	var priorityTabs []string
 	for p := models.Priority(0); p < 3; p++ {
-		if p == m.priority {
-			priorityDisplay += styling.FocusedStyle.Render(p.String() + " ")
-		} else {
-			priorityDisplay += p.String() + " "
-		}
+		selected := p == m.priority
+		hovered := m.editState == editState(int(p)+3)
+
+		priorityTab := styling.GetStyledPriority(p, selected, hovered)
+
+		priorityTabs = append(priorityTabs, priorityTab)
 	}
+
+	prioritySection := lipgloss.JoinHorizontal(lipgloss.Center, priorityTabs...)
 
 	// Title field
 	titleField := "Title"
@@ -176,20 +169,20 @@ func (m *TodoEditModal) View() string {
 
 	// Priority field
 	priorityField := "Priority"
-	if m.editState == editingPriority {
+	if m.editState == editingPriorityLow || m.editState == editingPriorityMedium || m.editState == editingPriorityHigh {
 		priorityField = styling.FocusedStyle.Render(priorityField)
 	}
 
 	// Combine all content
 	content := fmt.Sprintf(
 		"%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
-		fmt.Sprintf("Editing Todo #%d", m.todo.ID),
-		statusPill,
+		styling.TextStyle.Render(fmt.Sprintf("Editing Todo #%d", m.todo.ID)),
+		status,
 		title,
 		description,
 		tags,
-		fmt.Sprintf("%s\n%s", priorityField, priorityDisplay),
-		"ctrl+s: save  tab: next field  esc: cancel",
+		fmt.Sprintf("%s\n%s", priorityField, prioritySection),
+		styling.SubtextStyle.Render("ctrl+s: save  tab: next field  esc: cancel"),
 	)
 
 	// Center the modal
@@ -204,7 +197,7 @@ func (m *TodoEditModal) View() string {
 	return positioned
 }
 
-func (m *TodoEditModal) toggleFocus() {
+func (m *TodoEditModal) goForward() {
 	switch m.editState {
 	case editingTitle:
 		m.titleInput.Blur()
@@ -216,10 +209,37 @@ func (m *TodoEditModal) toggleFocus() {
 		m.editState = editingTags
 	case editingTags:
 		m.tagsInput.Blur()
-		m.editState = editingPriority
-	case editingPriority:
+		m.editState = editingPriorityLow
+	case editingPriorityLow:
+		m.editState = editingPriorityMedium
+	case editingPriorityMedium:
+		m.editState = editingPriorityHigh
+	case editingPriorityHigh:
 		m.titleInput.Focus()
 		m.editState = editingTitle
+	}
+}
+
+func (m *TodoEditModal) goBack() {
+	switch m.editState {
+	case editingTitle:
+		m.titleInput.Blur()
+		m.editState = editingPriorityHigh
+	case editingDescription:
+		m.descInput.Blur()
+		m.titleInput.Focus()
+		m.editState = editingTitle
+	case editingTags:
+		m.descInput.Focus()
+		m.tagsInput.Blur()
+		m.editState = editingDescription
+	case editingPriorityLow:
+		m.tagsInput.Focus()
+		m.editState = editingTags
+	case editingPriorityMedium:
+		m.editState = editingPriorityLow
+	case editingPriorityHigh:
+		m.editState = editingPriorityMedium
 	}
 }
 
