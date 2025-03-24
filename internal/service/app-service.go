@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -163,7 +164,7 @@ func (s *AppService) GetOpenTodos() ([]*models.Todo, error) {
 		return nil, fmt.Errorf("couldn't fetch open todos: %w", err)
 	}
 
-	return todos, nil
+	return sortTodos(todos), nil
 }
 
 func (s *AppService) GetActiveTodos() ([]*models.Todo, error) {
@@ -173,7 +174,7 @@ func (s *AppService) GetActiveTodos() ([]*models.Todo, error) {
 		return nil, fmt.Errorf("couldn't fetch active todos: %w", err)
 	}
 
-	return todos, nil
+	return sortTodos(todos), nil
 }
 
 func (s *AppService) GetCompletedTodos() ([]*models.Todo, error) {
@@ -183,7 +184,7 @@ func (s *AppService) GetCompletedTodos() ([]*models.Todo, error) {
 		return nil, fmt.Errorf("couldn't fetch completed todos: %w", err)
 	}
 
-	return todos, nil
+	return sortTodos(todos), nil
 }
 
 func (s *AppService) GetArchivedTodos() ([]*models.Todo, error) {
@@ -193,7 +194,7 @@ func (s *AppService) GetArchivedTodos() ([]*models.Todo, error) {
 		return nil, fmt.Errorf("couldn't fetch archived todos: %w", err)
 	}
 
-	return todos, nil
+	return sortTodos(todos), nil
 }
 
 func (s *AppService) SearchTodos(query string) ([]*models.Todo, error) {
@@ -203,7 +204,7 @@ func (s *AppService) SearchTodos(query string) ([]*models.Todo, error) {
 		return nil, fmt.Errorf("couldn't search for '%s': %w", query, err)
 	}
 
-	return todos, nil
+	return sortTodos(todos), nil
 }
 
 // Tag methods
@@ -234,7 +235,7 @@ func (s *AppService) GetTodosByTag(tag string) ([]*models.Todo, error) {
 		return nil, fmt.Errorf("couldn't get todos with tag '%s': %w", tag, err)
 	}
 
-	return todos, nil
+	return sortTodos(todos), nil
 }
 
 // Due date methods
@@ -294,4 +295,13 @@ func (s *AppService) SetPriority(todoID int64, priority models.Priority) error {
 	}
 
 	return nil
+}
+
+func sortTodos(todos []*models.Todo) []*models.Todo {
+	// Sort todos by priority (high to low)
+	sort.Slice(todos, func(i, j int) bool {
+		return todos[i].Priority > todos[j].Priority
+	})
+
+	return todos
 }
