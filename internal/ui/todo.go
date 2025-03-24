@@ -2,14 +2,14 @@ package ui
 
 import (
 	"fmt"
-	"sort"
+	"io"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
@@ -22,9 +22,9 @@ type TodoItem struct {
 
 func (i TodoItem) Title() string {
 	priorityMarker := map[models.Priority]string{
-		models.Low:    "⬇️",
-		models.Medium: "➡️",
-		models.High:   "⬆️",
+		models.Low:    styling.GetStyledPriority(models.Low, true, false),
+		models.Medium: styling.GetStyledPriority(models.Medium, true, false),
+		models.High:   styling.GetStyledPriority(models.High, true, false),
 	}[i.todo.Priority]
 
 	return fmt.Sprintf("%s %s", priorityMarker, i.todo.Title)
@@ -51,83 +51,77 @@ func (i TodoItem) FilterValue() string {
 	return i.todo.Title
 }
 
+type TodoItemDelegate struct{}
+
+func (d TodoItemDelegate) Height() int                             { return 1 }
+func (d TodoItemDelegate) Spacing() int                            { return 0 }
+func (d TodoItemDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
+func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
+	i, ok := listItem.(TodoItem)
+	if !ok {
+		return
+	}
+
+	str := fmt.Sprintf("%d. %s", index+1, i.Title())
+
+	fn := lipgloss.NewStyle().Foreground(styling.TextColor).Render
+	if index == m.Index() {
+		fn = styling.HoverStyle.Render
+	}
+
+	fmt.Fprint(w, fn(str))
+}
+
 type TodoModel struct {
 	service        *service.AppService
 	tuiService     *service.TuiService
 	list           list.Model
-	textInput      textinput.Model
 	currentFilter  models.Status
 	width          int
 	height         int
 	quitting       bool
 	showingModal   bool
 	modalComponent tea.Model
-	err            error
+	footer         tea.Model
 }
 
 func NewTodoModel(appService *service.AppService) *TodoModel {
 	tuiService := service.NewTuiService()
 
-	// Setup input
-	ti := textinput.New()
-	ti.Placeholder = "Create new todo..."
-	ti.Focus()
-
 	// Setup list
-	delegate := list.NewDefaultDelegate()
-	todoList := list.New([]list.Item{}, delegate, 0, 0)
+	todoList := list.New([]list.Item{}, TodoItemDelegate{}, 0, 0)
 	todoList.Title = ""
 	todoList.DisableQuitKeybindings()
 	todoList.SetShowTitle(false)
 	todoList.SetShowHelp(false)
+	todoList.SetShowStatusBar(false)
+
+	footer := NewFooterModel(appService, tuiService)
 
 	// Create model
 	m := &TodoModel{
 		service:       appService,
 		tuiService:    tuiService,
-		textInput:     ti,
 		list:          todoList,
-		currentFilter: models.Doing, // Default to showing "doing" todos
+		currentFilter: models.Doing,
+		footer:        footer,
 	}
 
-	// Set custom keys
-	m.setupKeyMap()
-
+	todos, err := appService.GetActiveTodos()
+	if err == nil && len(todos) > 0 {
+		items := make([]list.Item, len(todos))
+		for i, todo := range todos {
+			items[i] = TodoItem{todo: todo}
+		}
+		m.list.SetItems(items)
+	} else if err != nil {
+		log.Error("Error pre-loading todos", "error", err)
+	}
 	return m
 }
 
-func (m *TodoModel) setupKeyMap() {
-	m.list.AdditionalFullHelpKeys = func() []key.Binding {
-		return []key.Binding{
-			key.NewBinding(
-				key.WithKeys("n"),
-				key.WithHelp("n", "new todo"),
-			),
-			key.NewBinding(
-				key.WithKeys("e"),
-				key.WithHelp("e", "edit todo"),
-			),
-			key.NewBinding(
-				key.WithKeys("d"),
-				key.WithHelp("d", "delete todo"),
-			),
-			key.NewBinding(
-				key.WithKeys("space"),
-				key.WithHelp("space", "advance status"),
-			),
-			key.NewBinding(
-				key.WithKeys("tab"),
-				key.WithHelp("tab", "change filter"),
-			),
-		}
-	}
-}
-
 func (m *TodoModel) Init() tea.Cmd {
-	return tea.Batch(
-		m.loadTodos(),
-		textinput.Blink,
-	)
+	return nil
 }
 
 func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -147,54 +141,57 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg,
 			m.tuiService.KeyMap.Quit,
 		):
-			m.quitting = true
-			return m, tea.Quit
-
-		case msg.String() == "1":
-			m.currentFilter = models.Open
-			return m, m.loadTodos()
-		case msg.String() == "2":
-			m.currentFilter = models.Doing
-			return m, m.loadTodos()
-		case msg.String() == "3":
-			m.currentFilter = models.Done
-			return m, m.loadTodos()
-		case msg.String() == "4":
-			m.currentFilter = models.Archived
-			return m, m.loadTodos()
-
-		case msg.String() == "tab":
-			// Cycle through filters
-			m.currentFilter = (m.currentFilter + 1) % 4
-			return m, m.loadTodos()
-
-		case msg.String() == "enter":
-			// Create new todo when pressing enter in the input
-			if m.textInput.Value() != "" {
-				cmd := m.createTodoCmd(m.textInput.Value(), "")
-				m.textInput.Reset()
-				return m, tea.Batch(cmd, m.loadTodos())
+			if m.tuiService.SelectedPane == service.New {
+				m.tuiService.SelectedPane = service.Main
+			} else {
+				m.quitting = true
+				return m, tea.Quit
 			}
 
-		case msg.String() == "space":
+		case key.Matches(msg, m.tuiService.KeyMap.SwitchPane):
+			if m.tuiService.SelectedPane == service.Main {
+				switch key := msg.String(); key {
+				case "1":
+					m.tuiService.SelectedPane = service.Main
+					m.currentFilter = models.Open
+					return m, m.loadTodosCmd()
+				case "2":
+					m.tuiService.SelectedPane = service.Main
+					m.currentFilter = models.Doing
+					return m, m.loadTodosCmd()
+				case "3":
+					m.tuiService.SelectedPane = service.Main
+					m.currentFilter = models.Done
+					return m, m.loadTodosCmd()
+				case "4":
+					m.tuiService.SelectedPane = service.Main
+					m.currentFilter = models.Archived
+					return m, m.loadTodosCmd()
+
+				case "5":
+					m.tuiService.SelectedPane = service.New
+				}
+			}
+
+		case key.Matches(msg, m.tuiService.KeyMap.AdvanceStatus):
 			// Advance todo status
 			if m.list.SelectedItem() != nil {
 				item := m.list.SelectedItem().(TodoItem)
 				return m, m.advanceTodoStatusCmd(item.todo.ID)
 			}
 
-		case msg.String() == "e":
+		case key.Matches(msg, m.tuiService.KeyMap.Edit):
 			// Edit selected todo
 			if m.list.SelectedItem() != nil {
 				item := m.list.SelectedItem().(TodoItem)
 				return m, m.showEditModalCmd(item.todo)
 			}
 
-		case msg.String() == "d":
+		case key.Matches(msg, m.tuiService.KeyMap.Delete):
 			// Delete selected todo
 			if m.list.SelectedItem() != nil {
 				item := m.list.SelectedItem().(TodoItem)
-				return m, m.deleteTodoCmd(item.todo.ID)
+				return m, m.showConfirmDeleteCmd(item.todo.ID)
 			}
 		}
 	case tea.WindowSizeMsg:
@@ -205,6 +202,7 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		footerHeight := 3 // Input + bottom padding
 
 		m.list.SetSize(msg.Width, msg.Height-headerHeight-footerHeight)
+		log.Debug("todo window size", msg.Width, msg.Height, m.showingModal)
 
 		// Pass size to modal if active
 		if m.showingModal && m.modalComponent != nil {
@@ -222,19 +220,21 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 
 	case todoCreatedMsg:
-		cmds = append(cmds, m.loadTodos())
+		m.currentFilter = models.Open
+		cmds = append(cmds, m.loadTodosCmd())
 		cmds = append(cmds, ShowDefaultToast("Todo created", SuccessToast))
 
 	case todoUpdatedMsg:
-		cmds = append(cmds, m.loadTodos())
+		cmds = append(cmds, m.loadTodosCmd())
 		cmds = append(cmds, ShowDefaultToast("Todo updated", SuccessToast))
 
 	case todoDeletedMsg:
-		cmds = append(cmds, m.loadTodos())
+		m.showingModal = false
+		cmds = append(cmds, m.loadTodosCmd())
 		cmds = append(cmds, ShowDefaultToast("Todo deleted", SuccessToast))
 
 	case todoStatusChangedMsg:
-		cmds = append(cmds, m.loadTodos())
+		cmds = append(cmds, m.loadTodosCmd())
 		cmds = append(cmds, ShowDefaultToast(
 			fmt.Sprintf("Todo status changed to %s", msg.newStatus),
 			SuccessToast))
@@ -245,8 +245,15 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case modalCloseMsg:
 		m.showingModal = false
 		if msg.reload {
-			cmds = append(cmds, m.loadTodos())
+			cmds = append(cmds, m.loadTodosCmd())
 		}
+
+	case CreateTodoMsg:
+		m.tuiService.SelectedPane = service.Main
+		cmds = append(cmds, m.createTodoCmd(msg.Title, msg.Priority))
+
+	case showModalMsg:
+		return m, tea.WindowSize()
 	}
 
 	// Update list
@@ -255,8 +262,15 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	// Update text input
-	m.textInput, cmd = m.textInput.Update(msg)
-	cmds = append(cmds, cmd)
+	if m.tuiService.SelectedPane == service.New {
+		m.footer, cmd = m.footer.Update(msg)
+		cmds = append(cmds, cmd)
+	}
+
+	if m.showingModal && m.modalComponent != nil {
+		m.modalComponent, cmd = m.modalComponent.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 
 	return m, tea.Batch(cmds...)
 }
@@ -269,88 +283,32 @@ func (m *TodoModel) View() string {
 		return m.modalComponent.View()
 	}
 
-	// Header
 	header := m.HeaderView()
+	footer := m.footer.View()
+
+	headerHeight := lipgloss.Height(header)
+	footerHeight := lipgloss.Height(footer)
+
+	m.list.SetHeight(m.height - headerHeight - footerHeight - 4)
 
 	// Main list
-	listView := lipgloss.NewStyle().Width(m.width).Padding(styling.Padding).Render(m.list.View())
+	listView := lipgloss.NewStyle().Width(m.width - 2).Padding(styling.Padding).Render(m.list.View())
 
-	// Input
-	inputView := fmt.Sprintf(
-		"\n%s\n",
-		m.textInput.View(),
-	)
-
+	padding := lipgloss.NewStyle().Padding(1, 1)
 	// Combine all views
-	return lipgloss.JoinVertical(
+	return padding.Render(lipgloss.JoinVertical(
 		lipgloss.Top,
 		header,
 		listView,
-		inputView,
-	)
+		footer,
+	))
 }
 
 func (m *TodoModel) HeaderView() string {
-	statusColors := map[models.Status]lipgloss.Color{
-		models.Open:     styling.OpenStatusColor,
-		models.Doing:    styling.DoingStatusColor,
-		models.Done:     styling.DoneStatusColor,
-		models.Archived: styling.ArchivedStatusColor,
-	}
-
 	var tabs []string
 
-	// Create a tab for each status
 	for status := models.Open; status <= models.Archived; status++ {
-		// Number section (colored circle with status number)
-		statusColor := statusColors[status]
-
-		// Create indicator with number
-		indicator := lipgloss.NewStyle().
-			Foreground(styling.BlackColor).
-			Background(statusColor).
-			Padding(0, 1, 0, 0).
-			Bold(true).
-			Render(fmt.Sprintf("%d", status+1))
-
-		// Text section (status name)
-		var textStyle lipgloss.Style
-		var leftCapStyle lipgloss.Style
-		var rightCapStyle lipgloss.Style
-		if m.currentFilter == status {
-			// Active tab
-			textStyle = lipgloss.NewStyle().
-				Foreground(styling.BlackColor).
-				Background(statusColor).
-				Padding(0, 0)
-			leftCapStyle = lipgloss.NewStyle().
-				Foreground(statusColor).
-				Padding(0, 0)
-			rightCapStyle = lipgloss.NewStyle().
-				Foreground(statusColor).
-				Padding(0, 0).
-				MarginRight(2)
-		} else {
-			// Inactive tab
-			textStyle = lipgloss.NewStyle().
-				Foreground(styling.SubtextColor).
-				Background(styling.BackgroundColor).
-				Padding(0, 0)
-			leftCapStyle = lipgloss.NewStyle().
-				Foreground(statusColor).
-				Padding(0, 0)
-			rightCapStyle = lipgloss.NewStyle().
-				Foreground(styling.BackgroundColor).
-				Padding(0, 0).
-				MarginRight(2)
-		}
-
-		statusText := textStyle.Render(" " + status.String())
-		leftCap := leftCapStyle.Render("")
-		rightCap := rightCapStyle.Render("")
-
-		// Combine indicator and text
-		tab := lipgloss.JoinHorizontal(lipgloss.Center, leftCap, indicator, statusText, rightCap)
+		tab := styling.GetStyledStatus(status, m.currentFilter == status, false)
 
 		tabs = append(tabs, tab)
 	}
@@ -377,7 +335,7 @@ type todoCreatedMsg struct {
 
 type todoUpdatedMsg struct{}
 
-type todoDeletedMsg struct{}
+type showModalMsg struct{}
 
 type todoStatusChangedMsg struct {
 	newStatus models.Status
@@ -396,7 +354,7 @@ type modalCloseMsg struct {
 }
 
 // Commands
-func (m *TodoModel) loadTodos() tea.Cmd {
+func (m *TodoModel) loadTodosCmd() tea.Cmd {
 	return func() tea.Msg {
 		var todos []*models.Todo
 		var err error
@@ -416,18 +374,13 @@ func (m *TodoModel) loadTodos() tea.Cmd {
 			return todoErrorMsg{err: err}
 		}
 
-		// Sort todos by priority (high to low)
-		sort.Slice(todos, func(i, j int) bool {
-			return todos[i].Priority > todos[j].Priority
-		})
-
 		return todosLoadedMsg{todos: todos}
 	}
 }
 
-func (m *TodoModel) createTodoCmd(title, description string) tea.Cmd {
+func (m *TodoModel) createTodoCmd(title string, priority models.Priority) tea.Cmd {
 	return func() tea.Msg {
-		todo, err := m.service.CreateTodo(title, description, models.Medium) // Default priority
+		todo, err := m.service.CreateTodo(title, "", priority)
 		if err != nil {
 			return todoErrorMsg{err: err}
 		}
@@ -466,20 +419,24 @@ func (m *TodoModel) advanceTodoStatusCmd(todoID int64) tea.Cmd {
 	}
 }
 
-func (m *TodoModel) deleteTodoCmd(todoID int64) tea.Cmd {
-	return func() tea.Msg {
-		err := m.service.DeleteTodo(todoID)
-		if err != nil {
-			return todoErrorMsg{err: err}
-		}
-		return todoDeletedMsg{}
-	}
-}
-
 func (m *TodoModel) showEditModalCmd(todo *models.Todo) tea.Cmd {
 	return func() tea.Msg {
 		m.showingModal = true
-		m.modalComponent = NewTodoEditModal(todo, m.width, m.height, m.service)
-		return nil
+		m.modalComponent = NewTodoEditModal(todo, m.width, m.height, m.service, m.tuiService)
+		return showModalMsg{}
+	}
+}
+
+func (m *TodoModel) showConfirmDeleteCmd(todoID int64) tea.Cmd {
+	return func() tea.Msg {
+		m.showingModal = true
+		m.modalComponent = NewConfirmDeleteModal(m.service, m.tuiService, todoID)
+		return showModalMsg{}
+	}
+}
+
+func CloseModalCmd(reload bool) tea.Cmd {
+	return func() tea.Msg {
+		return modalCloseMsg{reload: reload}
 	}
 }
