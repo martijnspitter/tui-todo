@@ -12,9 +12,15 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/repository"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/ui"
+	"github.com/martijnspitter/tui-todo/internal/version"
 )
 
 func main() {
+	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
+		fmt.Printf("todo version %s\n", version.GetVersion())
+		os.Exit(0)
+	}
+
 	logger := logger.InitLogger()
 	if logger != nil {
 		defer logger.Close()
