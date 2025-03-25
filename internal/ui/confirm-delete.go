@@ -108,7 +108,7 @@ func (m *ConfirmDeleteModel) View() string {
 		Border(lipgloss.RoundedBorder()).
 		Padding(1, 2).
 		Width(m.width / 2).
-		BorderForeground(styling.BrandColor)
+		BorderForeground(styling.Mauve)
 
 	// Render buttons with appropriate styles
 	cancelView := m.cancelButton.View()

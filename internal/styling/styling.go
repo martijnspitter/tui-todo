@@ -2,14 +2,17 @@ package styling
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martijnspitter/tui-todo/internal/models"
 )
 
 var (
-	BrandColor     = lipgloss.Color("#cba6f7")
-	HighlightColor = lipgloss.Color("#f9e2af")
+	Mauve     = lipgloss.Color("#cba6f7")
+	Yellow    = lipgloss.Color("#f9e2af")
+	Lavender  = lipgloss.Color("#b4befe")
+	Rosewater = lipgloss.Color("#f2cdcd")
 
 	OpenStatusColor     = lipgloss.Color("#f5e0dc")
 	DoingStatusColor    = lipgloss.Color("#89b4fa")
@@ -33,8 +36,8 @@ var (
 	ErrorColor   = lipgloss.Color("#d13523")
 	SuccessColor = lipgloss.Color("#1b7e41")
 
-	FocusedStyle = lipgloss.NewStyle().Foreground(BrandColor)
-	HoverStyle   = lipgloss.NewStyle().Foreground(HighlightColor)
+	FocusedStyle = lipgloss.NewStyle().Foreground(Mauve)
+	HoverStyle   = lipgloss.NewStyle().Foreground(Yellow)
 	RowStyle     = lipgloss.NewStyle().Background(BlackColor)
 	TextStyle    = lipgloss.NewStyle().Foreground(TextColor)
 	SubtextStyle = lipgloss.NewStyle().Foreground(SubtextColor)
@@ -122,7 +125,7 @@ func GetStyledPriority(p models.Priority, selected, hovered bool) string {
 		textColor = BlackColor
 	}
 	if hovered {
-		bgColor = HighlightColor
+		bgColor = Yellow
 	}
 
 	// Text section (status name)
@@ -134,4 +137,49 @@ func GetStyledPriority(p models.Priority, selected, hovered bool) string {
 		MarginRight(1)
 
 	return textStyle.Render(p.String())
+}
+
+func GetStyledTimeStamp(timeStamp time.Time, prefix string) string {
+	textStyle := lipgloss.NewStyle().
+		Foreground(Lavender).
+		Background(BackgroundColor).
+		Padding(0, 1).
+		Align(lipgloss.Center).
+		MarginRight(1)
+
+	text := timeStamp.Format(time.Stamp)
+	if prefix != "" {
+		text = prefix + " " + text
+	}
+
+	return textStyle.Render(text)
+}
+
+func GetStyledTag(tag string) string {
+	textStyle := lipgloss.NewStyle().
+		Foreground(BlackColor).
+		Background(Rosewater).
+		Padding(0, 1).
+		Align(lipgloss.Center).
+		MarginRight(1)
+
+	return textStyle.Render(tag)
+}
+
+func GetSelectedBlock(selected bool) string {
+	if selected {
+		return lipgloss.NewStyle().
+			Foreground(Yellow).
+			Background(Yellow).
+			Padding(0, 1).
+			Align(lipgloss.Center).
+			MarginRight(1).
+			Render("")
+	}
+
+	return lipgloss.NewStyle().
+		Padding(0, 1).
+		Align(lipgloss.Center).
+		MarginRight(1).
+		Render("")
 }

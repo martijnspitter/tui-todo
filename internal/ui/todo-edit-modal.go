@@ -46,6 +46,7 @@ func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.
 
 	desc := textarea.New()
 	desc.SetValue(todo.Description)
+	desc.ShowLineNumbers = true
 
 	tagsInput := textinput.New()
 	tagsInput.SetValue(strings.Join(todo.Tags, ", "))
@@ -129,7 +130,7 @@ func (m *TodoEditModal) View() string {
 		Border(lipgloss.RoundedBorder()).
 		Padding(1, 2).
 		Width(m.width / 2).
-		BorderForeground(styling.BrandColor)
+		BorderForeground(styling.Mauve)
 
 	status := styling.GetStyledStatus(m.todo.Status, true, true)
 
@@ -158,6 +159,7 @@ func (m *TodoEditModal) View() string {
 	if m.editState == editingDescription {
 		descField = styling.FocusedStyle.Render(descField)
 	}
+	m.descInput.SetWidth((m.width / 2) - 4)
 	description := fmt.Sprintf("%s\n%s", descField, m.descInput.View())
 
 	// Tags field
