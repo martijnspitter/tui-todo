@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
@@ -195,10 +196,15 @@ func (m *TodoEditModal) View() string {
 	}
 	dueDate := fmt.Sprintf("%s\n%s", dueDateField, m.dueDateInput.View())
 
+	header := fmt.Sprintf("Editing Todo #%d", m.todo.ID)
+	if m.todo.ID == 0 {
+		header = "Create New Todo"
+	}
+
 	// Combine all content
 	content := fmt.Sprintf(
 		"%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
-		styling.TextStyle.Render(fmt.Sprintf("Editing Todo #%d", m.todo.ID)),
+		styling.TextStyle.Render(header),
 		status,
 		title,
 		description,
@@ -289,6 +295,7 @@ func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 			// Try to parse the date string
 			dueDate, err := time.Parse("2006-01-02 15:04", dueDateStr)
 			if err != nil {
+				log.Error("Invalid due date", err)
 				return todoErrorMsg{err: fmt.Errorf("invalid due date format: %w", err)}
 			}
 			m.todo.DueDate = &dueDate
