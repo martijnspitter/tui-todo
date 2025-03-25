@@ -18,7 +18,7 @@ func InitLogger() *os.File {
 
 	if fileErr == nil {
 		log.SetOutput(loggerFile)
-		log.SetTimeFormat(time.DateTime)
+		log.SetTimeFormat(time.StampMilli)
 		log.SetReportCaller(true)
 		log.SetLevel(log.DebugLevel)
 		log.Debug("Logging initialized")
