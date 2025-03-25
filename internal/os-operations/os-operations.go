@@ -7,8 +7,8 @@ import (
 	"runtime"
 )
 
-func GetFilePath(fileName string, isDev bool) string {
-	if isDev {
+func GetFilePath(fileName, version string) string {
+	if version == "dev" {
 		return fmt.Sprintf("./%s", fileName)
 	}
 

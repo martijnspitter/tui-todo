@@ -16,17 +16,18 @@ import (
 )
 
 func main() {
+	version := version.GetVersion()
 	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
-		fmt.Printf("todo version %s\n", version.GetVersion())
+		fmt.Printf("todo version %s\n", version)
 		os.Exit(0)
 	}
 
-	logger := logger.InitLogger()
+	logger := logger.InitLogger(version)
 	if logger != nil {
 		defer logger.Close()
 	}
 
-	todoRepo, err := repository.NewSQLiteTodoRepository()
+	todoRepo, err := repository.NewSQLiteTodoRepository(version)
 	if err != nil {
 		log.Error("Failed to start db", err)
 		os.Exit(1)

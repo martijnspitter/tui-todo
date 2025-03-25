@@ -18,8 +18,8 @@ type SQLiteTodoRepository struct {
 	db *sql.DB
 }
 
-func NewSQLiteTodoRepository() (*SQLiteTodoRepository, error) {
-	path := osoperations.GetFilePath("todo.sql", true)
+func NewSQLiteTodoRepository(version string) (*SQLiteTodoRepository, error) {
+	path := osoperations.GetFilePath("todo.sql", version)
 
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {

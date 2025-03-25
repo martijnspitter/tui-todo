@@ -1,9 +1,9 @@
 package version
 
 // Version is set during build using ldflags
-var Version = "dev"
+var version = "dev"
 
 // GetVersion returns the current version of the application
 func GetVersion() string {
-	return Version
+	return version
 }

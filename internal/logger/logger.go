@@ -10,8 +10,8 @@ import (
 	osoperations "github.com/martijnspitter/tui-todo/internal/os-operations"
 )
 
-func InitLogger() *os.File {
-	path := osoperations.GetFilePath("debug.log", true)
+func InitLogger(version string) *os.File {
+	path := osoperations.GetFilePath("debug.log", version)
 	// Open file with O_TRUNC flag to truncate it if it exists
 	// This will create an empty file each time
 	loggerFile, fileErr := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
