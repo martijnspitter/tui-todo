@@ -88,23 +88,22 @@ todo
 
 ## Collaboration
 
-We welcome contributions to make Todo TUI even better! Here's how you can help:
+We welcome contributions to make Todo TUI even better! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) guide for details on:
 
-### Getting Started
+- Our development workflow
+- Commit message guidelines
+- Pull request process
+- Code style standards
 
-1. **Fork the repository** by clicking the "Fork" button at the top right of the [GitHub repository page](https://github.com/martijnspitter/tui-todo).
+For a quick start:
 
-2. **Clone your fork** to your local machine:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes using conventional commits
+4. Push to your branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-   ```bash
-   git clone https://github.com/YOUR-USERNAME/tui-todo.git
-   cd tui-todo
-   ```
-
-3. **Create a new branch** for your feature or bugfix:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+We look forward to your contributions!
 
 ### Development Workflow
 
