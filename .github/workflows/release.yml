@@ -51,7 +51,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -o ${{ matrix.output }} -ldflags="-X 'github.com/martijnspitter/tui-todo/internal/version.Version=v${{ steps.get_version.outputs.VERSION }}'" ./cmd/tui-todo
+          go build -o ${{ matrix.output }} -ldflags="-X 'github.com/martijnspitter/tui-todo/internal/version.version=v${{ steps.get_version.outputs.VERSION }}'" ./cmd/tui-todo
 
       - name: Create installer script
         run: |
