@@ -298,9 +298,15 @@ func (s *AppService) SetPriority(todoID int64, priority models.Priority) error {
 }
 
 func sortTodos(todos []*models.Todo) []*models.Todo {
-	// Sort todos by priority (high to low)
+	// Sort todos by priority (high to low) and then by updatedAt (newest first)
 	sort.Slice(todos, func(i, j int) bool {
-		return todos[i].Priority > todos[j].Priority
+		// If priorities are different, sort by priority (high to low)
+		if todos[i].Priority != todos[j].Priority {
+			return todos[i].Priority > todos[j].Priority
+		}
+
+		// If priorities are the same, sort by updatedAt (newest first)
+		return todos[i].UpdatedAt.After(todos[j].UpdatedAt)
 	})
 
 	return todos
