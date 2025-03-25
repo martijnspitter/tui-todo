@@ -46,7 +46,7 @@ func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 	// Left-aligned elements
 	selected := styling.GetSelectedBlock(index == m.Index())
 	priorityMarker := styling.GetStyledPriority(i.todo.Priority, true, false)
-	title := styling.TextStyle.MarginRight(1).Render(i.Title())
+	title := styling.TextStyle.MarginRight(1).Width(50).Render(truncateString(i.Title(), 50))
 
 	// Right-aligned elements
 	var rightElements []string
@@ -217,6 +217,10 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				item := m.list.SelectedItem().(TodoItem)
 				return m, m.showEditModalCmd(item.todo)
 			}
+		case key.Matches(msg, m.tuiService.KeyMap.New):
+			// Create new Todo
+			todo := &models.Todo{}
+			return m, m.showEditModalCmd(todo)
 
 		case key.Matches(msg, m.tuiService.KeyMap.Delete):
 			// Delete selected todo
@@ -233,7 +237,6 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		footerHeight := 3 // Input + bottom padding
 
 		m.list.SetSize(msg.Width, msg.Height-headerHeight-footerHeight)
-		log.Debug("todo window size", msg.Width, msg.Height, m.showingModal)
 
 		// Pass size to modal if active
 		if m.showingModal && m.modalComponent != nil {
@@ -360,9 +363,7 @@ type todosLoadedMsg struct {
 	todos []*models.Todo
 }
 
-type todoCreatedMsg struct {
-	todo *models.Todo
-}
+type todoCreatedMsg struct{}
 
 type todoUpdatedMsg struct{}
 
@@ -411,11 +412,11 @@ func (m *TodoModel) loadTodosCmd() tea.Cmd {
 
 func (m *TodoModel) createTodoCmd(title string, priority models.Priority) tea.Cmd {
 	return func() tea.Msg {
-		todo, err := m.service.CreateTodo(title, "", priority)
+		err := m.service.CreateTodo(title, "", priority, []string{})
 		if err != nil {
 			return todoErrorMsg{err: err}
 		}
-		return todoCreatedMsg{todo: todo}
+		return todoCreatedMsg{}
 	}
 }
 
