@@ -262,18 +262,9 @@ func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 			}
 		}
 
-		// Update the todo
-		err := m.appService.UpdateTodo(m.todo)
+		err := m.appService.SaveTodo(m.todo, tags)
 		if err != nil {
 			return todoErrorMsg{err: err}
-		}
-
-		// Handle tag updates (remove all, then add new)
-		for _, tag := range tags {
-			err := m.appService.AddTagToTodo(m.todo.ID, tag)
-			if err != nil {
-				return todoErrorMsg{err: err}
-			}
 		}
 
 		// Close modal and reload todos

@@ -20,7 +20,18 @@ func NewAppService(todoRepo repository.TodoRepository) *AppService {
 	}
 }
 
-func (s *AppService) CreateTodo(title, description string, priority models.Priority) (*models.Todo, error) {
+func (s *AppService) SaveTodo(todo *models.Todo, tags []string) error {
+	// Service decides whether to create or update based on ID or other criteria
+	if todo.ID == 0 {
+		// Create new
+		return s.CreateTodo(todo.Title, todo.Description, todo.Priority, tags)
+	} else {
+		// Update existing
+		return s.UpdateTodo(todo, tags)
+	}
+}
+
+func (s *AppService) CreateTodo(title, description string, priority models.Priority, tags []string) error {
 	todo := &models.Todo{
 		Title:       title,
 		Description: description,
@@ -33,10 +44,18 @@ func (s *AppService) CreateTodo(title, description string, priority models.Prior
 	err := s.todoRepo.Create(todo)
 	if err != nil {
 		log.Error("Failed to create todo", "error", err, "title", title)
-		return nil, fmt.Errorf("couldn't create todo: %w", err)
+		return fmt.Errorf("couldn't create todo: %w", err)
 	}
 
-	return todo, nil
+	for _, tag := range tags {
+		err := s.AddTagToTodo(todo.ID, tag)
+		if err != nil {
+			log.Error("Could not add tag: %s %w", tag, err)
+			return fmt.Errorf("Could not add tag: %s %w", tag, err)
+		}
+	}
+
+	return nil
 }
 
 func (s *AppService) GetAllTodos() ([]*models.Todo, error) {
@@ -59,12 +78,20 @@ func (s *AppService) GetTodo(id int64) (*models.Todo, error) {
 	return todo, nil
 }
 
-func (s *AppService) UpdateTodo(todo *models.Todo) error {
+func (s *AppService) UpdateTodo(todo *models.Todo, tags []string) error {
 	todo.UpdatedAt = time.Now()
 	err := s.todoRepo.Update(todo)
 	if err != nil {
 		log.Error("Failed to update todo", "error", err, "id", todo.ID)
 		return fmt.Errorf("couldn't update todo #%d: %w", todo.ID, err)
+	}
+
+	for _, tag := range tags {
+		err := s.AddTagToTodo(todo.ID, tag)
+		if err != nil {
+			log.Error("Could not add tag: %s %w", tag, err)
+			return fmt.Errorf("Could not add tag: %s %w", tag, err)
+		}
 	}
 
 	return nil
