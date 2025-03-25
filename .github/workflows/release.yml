@@ -1,0 +1,128 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  release:
+    types: [created]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.21"
+
+      - name: Test
+        run: go test -v ./...
+
+      - name: Test Coverage
+        run: |
+          go test -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out
+
+  build:
+    name: Build Binaries
+    needs: test
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            output: todo
+          - goos: darwin
+            goarch: amd64
+            output: todo
+          - goos: darwin
+            goarch: arm64
+            output: todo
+          - goos: windows
+            goarch: amd64
+            output: todo.exe
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.23.4"
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go build -o ${{ matrix.output }} -ldflags="-X 'github.com/martijnspitter/tui-todo/internal/version.Version=${{ github.ref_name }}'" ./cmd/tui-todo
+
+      - name: Create installer script
+        run: |
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
+            # Create PowerShell installer
+            cat > install.ps1 << 'EOF'
+            $INSTALL_DIR = "$env:USERPROFILE\bin"
+            if (!(Test-Path $INSTALL_DIR)) { New-Item -ItemType Directory -Path $INSTALL_DIR }
+            Copy-Item -Path "todo.exe" -Destination "$INSTALL_DIR\" -Force
+            $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+            if (!$currentPath.Contains($INSTALL_DIR)) {
+                $newPath = "$currentPath;$INSTALL_DIR"
+                [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+                Write-Host "Added $INSTALL_DIR to PATH. You may need to restart your terminal."
+            }
+            Write-Host "Installation complete. You can now run 'todo' from anywhere."
+            EOF
+          else
+            # Create shell installer
+            cat > install.sh << 'EOF'
+            #!/bin/bash
+            set -e
+
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                INSTALL_DIR="$HOME/bin"
+            else
+                INSTALL_DIR="$HOME/.local/bin"
+            fi
+
+            mkdir -p "$INSTALL_DIR"
+            cp todo "$INSTALL_DIR/"
+            chmod +x "$INSTALL_DIR/todo"
+
+            echo "Installed todo to $INSTALL_DIR"
+
+            if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+                echo "Please add $INSTALL_DIR to your PATH to use todo from anywhere."
+                echo "For example, add this line to your shell profile:"
+                echo "  export PATH=\"\$PATH:$INSTALL_DIR\""
+            else
+                echo "You can now run 'todo' from anywhere."
+            fi
+            EOF
+            chmod +x install.sh
+          fi
+
+      - name: Package Application
+        run: |
+          if [[ "${{ matrix.goos }}" == "windows" ]]; then
+            zip -r tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.zip ${{ matrix.output }} install.ps1
+          else
+            tar -czvf tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ${{ matrix.output }} install.sh
+          fi
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.${{ matrix.goos == 'windows' && 'zip' || 'tar.gz' }}
+          asset_name: tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.${{ matrix.goos == 'windows' && 'zip' || 'tar.gz' }}
+          asset_content_type: ${{ matrix.goos == 'windows' && 'application/zip' || 'application/gzip' }}
