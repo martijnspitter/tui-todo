@@ -65,7 +65,7 @@ func (s *AppService) GetAllTodos() ([]*models.Todo, error) {
 		return nil, fmt.Errorf("couldn't fetch todos: %w", err)
 	}
 
-	return todos, nil
+	return sortTodos(todos), nil
 }
 
 func (s *AppService) GetTodo(id int64) (*models.Todo, error) {
