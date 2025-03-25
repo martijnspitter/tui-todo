@@ -110,45 +110,24 @@ jobs:
         id: changelog
         if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
         run: |
-          # Extract changelog from git commits since last tag
           PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [ -z "$PREVIOUS_TAG" ]; then
-            # If this is the first tag, get all commits
             CHANGELOG=$(git log --pretty=format:"* %s (%h)" ${{ github.ref }})
           else
-            # Get commits between previous tag and current tag
             CHANGELOG=$(git log --pretty=format:"* %s (%h)" $PREVIOUS_TAG..${{ github.ref }})
           fi
           echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
           echo "$CHANGELOG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Create Release
-        id: create_release
-        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref_name }}
-          body: |
-            ## Changes in this release
-
-            ${{ steps.changelog.outputs.CHANGELOG }}
-
-            ## Installation
-
-            Download the appropriate package for your operating system and follow the installation instructions.
-          draft: false
-          prerelease: false
-
+      # Use softprops/action-gh-release for all builds
       - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ github.ref_name }}
+          # Only include the changelog in one job to avoid duplicate content
+          body: ${{ matrix.goos == 'linux' && matrix.goarch == 'amd64' && format('## Changes in this release\n\n{0}\n\n## Installation\n\nDownload the appropriate package for your operating system and follow the installation instructions.', steps.changelog.outputs.CHANGELOG) || '' }}
+          files: |
+            tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.${{ matrix.goos == 'windows' && 'zip' || 'tar.gz' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url || github.event.release.upload_url }}
-          asset_path: ./tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.${{ matrix.goos == 'windows' && 'zip' || 'tar.gz' }}
-          asset_name: tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.${{ matrix.goos == 'windows' && 'zip' || 'tar.gz' }}
-          asset_content_type: ${{ matrix.goos == 'windows' && 'application/zip' || 'application/gzip' }}
