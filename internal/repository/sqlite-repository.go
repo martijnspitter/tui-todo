@@ -11,7 +11,7 @@ import (
 
 	"github.com/martijnspitter/tui-todo/internal/models"
 	osoperations "github.com/martijnspitter/tui-todo/internal/os-operations"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type SQLiteTodoRepository struct {
@@ -21,7 +21,7 @@ type SQLiteTodoRepository struct {
 func NewSQLiteTodoRepository(version string) (*SQLiteTodoRepository, error) {
 	path := osoperations.GetFilePath("todo.sql", version)
 
-	db, err := sql.Open("sqlite3", path)
+	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, err
 	}
