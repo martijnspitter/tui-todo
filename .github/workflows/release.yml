@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   build-and-release:
+    if: github.actor == 'martijnspitter'
     runs-on: ubuntu-latest
     strategy:
       matrix:
