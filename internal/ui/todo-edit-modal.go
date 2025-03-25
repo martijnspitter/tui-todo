@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
@@ -20,6 +21,7 @@ const (
 	editingTitle editState = iota
 	editingDescription
 	editingTags
+	editingDueDate
 	editingPriorityLow
 	editingPriorityMedium
 	editingPriorityHigh
@@ -27,16 +29,17 @@ const (
 
 // TodoEditModal allows viewing and editing todo details
 type TodoEditModal struct {
-	todo       *models.Todo
-	titleInput textinput.Model
-	descInput  textarea.Model
-	tagsInput  textinput.Model
-	priority   models.Priority
-	editState  editState
-	width      int
-	height     int
-	appService *service.AppService
-	tuiService *service.TuiService
+	todo         *models.Todo
+	titleInput   textinput.Model
+	descInput    textarea.Model
+	tagsInput    textinput.Model
+	dueDateInput textinput.Model
+	priority     models.Priority
+	editState    editState
+	width        int
+	height       int
+	appService   *service.AppService
+	tuiService   *service.TuiService
 }
 
 func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.AppService, tuiService *service.TuiService) *TodoEditModal {
@@ -51,17 +54,24 @@ func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.
 	tagsInput := textinput.New()
 	tagsInput.SetValue(strings.Join(todo.Tags, ", "))
 
+	dueDateInput := textinput.New()
+	dueDateInput.Placeholder = "YYYY-MM-DD HH:MM (e.g. 2023-12-31 15:30)"
+	if todo.DueDate != nil {
+		dueDateInput.SetValue(todo.DueDate.Format("2006-01-02 15:04"))
+	}
+
 	return &TodoEditModal{
-		todo:       todo,
-		titleInput: ti,
-		descInput:  desc,
-		tagsInput:  tagsInput,
-		priority:   todo.Priority,
-		width:      width,
-		height:     height,
-		editState:  editingTitle,
-		appService: appService,
-		tuiService: tuiService,
+		todo:         todo,
+		titleInput:   ti,
+		descInput:    desc,
+		tagsInput:    tagsInput,
+		dueDateInput: dueDateInput,
+		priority:     todo.Priority,
+		width:        width,
+		height:       height,
+		editState:    editingTitle,
+		appService:   appService,
+		tuiService:   tuiService,
 	}
 }
 
@@ -119,6 +129,9 @@ func (m *TodoEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case editingTags:
 		m.tagsInput, cmd = m.tagsInput.Update(msg)
 		cmds = append(cmds, cmd)
+	case editingDueDate:
+		m.dueDateInput, cmd = m.dueDateInput.Update(msg)
+		cmds = append(cmds, cmd)
 	}
 
 	return m, tea.Batch(cmds...)
@@ -138,7 +151,7 @@ func (m *TodoEditModal) View() string {
 	var priorityTabs []string
 	for p := models.Priority(0); p < 3; p++ {
 		selected := p == m.priority
-		hovered := m.editState == editState(int(p)+3)
+		hovered := m.editState == editState(int(p)+4)
 
 		priorityTab := styling.GetStyledPriority(p, selected, hovered)
 
@@ -175,14 +188,22 @@ func (m *TodoEditModal) View() string {
 		priorityField = styling.FocusedStyle.Render(priorityField)
 	}
 
+	// Due Date field
+	dueDateField := "Due Date (YYYY-MM-DD HH:MM or empty to clear)"
+	if m.editState == editingDueDate {
+		dueDateField = styling.FocusedStyle.Render(dueDateField)
+	}
+	dueDate := fmt.Sprintf("%s\n%s", dueDateField, m.dueDateInput.View())
+
 	// Combine all content
 	content := fmt.Sprintf(
-		"%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
+		"%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
 		styling.TextStyle.Render(fmt.Sprintf("Editing Todo #%d", m.todo.ID)),
 		status,
 		title,
 		description,
 		tags,
+		dueDate,
 		fmt.Sprintf("%s\n%s", priorityField, prioritySection),
 		styling.SubtextStyle.Render("ctrl+s: save  tab: next field  esc: cancel"),
 	)
@@ -211,6 +232,10 @@ func (m *TodoEditModal) goForward() {
 		m.editState = editingTags
 	case editingTags:
 		m.tagsInput.Blur()
+		m.dueDateInput.Focus()
+		m.editState = editingDueDate
+	case editingDueDate:
+		m.dueDateInput.Blur()
 		m.editState = editingPriorityLow
 	case editingPriorityLow:
 		m.editState = editingPriorityMedium
@@ -235,9 +260,13 @@ func (m *TodoEditModal) goBack() {
 		m.descInput.Focus()
 		m.tagsInput.Blur()
 		m.editState = editingDescription
-	case editingPriorityLow:
+	case editingDueDate:
 		m.tagsInput.Focus()
+		m.dueDateInput.Blur()
 		m.editState = editingTags
+	case editingPriorityLow:
+		m.dueDateInput.Focus()
+		m.editState = editingDueDate
 	case editingPriorityMedium:
 		m.editState = editingPriorityLow
 	case editingPriorityHigh:
@@ -251,6 +280,19 @@ func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 		m.todo.Title = m.titleInput.Value()
 		m.todo.Description = m.descInput.Value()
 		m.todo.Priority = m.priority
+
+		dueDateStr := strings.TrimSpace(m.dueDateInput.Value())
+		if dueDateStr == "" {
+			// Clear due date if empty
+			m.todo.DueDate = nil
+		} else {
+			// Try to parse the date string
+			dueDate, err := time.Parse("2006-01-02 15:04", dueDateStr)
+			if err != nil {
+				return todoErrorMsg{err: fmt.Errorf("invalid due date format: %w", err)}
+			}
+			m.todo.DueDate = &dueDate
+		}
 
 		// Handle tags (split by comma and trim)
 		rawTags := strings.Split(m.tagsInput.Value(), ",")
