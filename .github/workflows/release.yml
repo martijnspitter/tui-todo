@@ -1,38 +1,16 @@
-name: Build & Release
+name: Create and Publish Release
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  release:
-    types: [created]
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  discussions: write
 
 jobs:
-  test:
-    name: Run Tests
-    if: github.event_name == 'release'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.23"
-
-      - name: Test
-        run: go test -v ./...
-
-      - name: Test Coverage
-        run: |
-          go test -coverprofile=coverage.out ./...
-          go tool cover -func=coverage.out
-
-  build:
-    name: Build Binaries
-    needs: test
-    if: github.event_name == 'release'
+  build-and-release:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -51,19 +29,26 @@ jobs:
             output: todo.exe
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Get all history for proper versioning
 
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: "1.23"
+          go-version: "1.22" # Use a valid Go version
 
-      - name: Build
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Build binary
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -o ${{ matrix.output }} -ldflags="-X 'github.com/martijnspitter/tui-todo/internal/version.Version=${{ github.ref_name }}'" ./cmd/tui-todo
+          go build -o ${{ matrix.output }} -ldflags="-X 'github.com/martijnspitter/tui-todo/internal/version.Version=v${{ steps.get_version.outputs.VERSION }}'" ./cmd/tui-todo
 
       - name: Create installer script
         run: |
@@ -110,7 +95,7 @@ jobs:
             chmod +x install.sh
           fi
 
-      - name: Package Application
+      - name: Package application
         run: |
           if [[ "${{ matrix.goos }}" == "windows" ]]; then
             zip -r tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.zip ${{ matrix.output }} install.ps1
@@ -118,12 +103,49 @@ jobs:
             tar -czvf tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ${{ matrix.output }} install.sh
           fi
 
+      - name: Generate changelog
+        id: changelog
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64' # Only run once
+        run: |
+          # Extract changelog from git commits since last tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREVIOUS_TAG" ]; then
+            # If this is the first tag, get all commits
+            CHANGELOG=$(git log --pretty=format:"* %s (%h)" ${{ github.ref }})
+          else
+            # Get commits between previous tag and current tag
+            CHANGELOG=$(git log --pretty=format:"* %s (%h)" $PREVIOUS_TAG..${{ github.ref }})
+          fi
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64' # Only run once
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
+          body: |
+            ## Changes in this release
+
+            ${{ steps.changelog.outputs.CHANGELOG }}
+
+            ## Installation
+
+            Download the appropriate package for your operating system and follow the installation instructions.
+          draft: false
+          prerelease: false
+
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ github.event.release.upload_url }}
+          upload_url: ${{ steps.create_release.outputs.upload_url || github.event.release.upload_url }}
           asset_path: ./tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.${{ matrix.goos == 'windows' && 'zip' || 'tar.gz' }}
           asset_name: tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.${{ matrix.goos == 'windows' && 'zip' || 'tar.gz' }}
           asset_content_type: ${{ matrix.goos == 'windows' && 'application/zip' || 'application/gzip' }}
