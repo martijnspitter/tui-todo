@@ -69,44 +69,44 @@ jobs:
         run: |
           if [[ "${{ matrix.goos }}" == "windows" ]]; then
             # Create PowerShell installer
-            cat > install.ps1 << 'EOF'
-            $INSTALL_DIR = "$env:USERPROFILE\bin"
-            if (!(Test-Path $INSTALL_DIR)) { New-Item -ItemType Directory -Path $INSTALL_DIR }
-            Copy-Item -Path "todo.exe" -Destination "$INSTALL_DIR\" -Force
-            $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
-            if (!$currentPath.Contains($INSTALL_DIR)) {
-                $newPath = "$currentPath;$INSTALL_DIR"
-                [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
-                Write-Host "Added $INSTALL_DIR to PATH. You may need to restart your terminal."
-            }
-            Write-Host "Installation complete. You can now run 'todo' from anywhere."
-            EOF
+            cat > install.ps1 << 'EOFPS'
+          $INSTALL_DIR = "$env:USERPROFILE\bin"
+          if (!(Test-Path $INSTALL_DIR)) { New-Item -ItemType Directory -Path $INSTALL_DIR }
+          Copy-Item -Path "todo.exe" -Destination "$INSTALL_DIR\" -Force
+          $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+          if (!$currentPath.Contains($INSTALL_DIR)) {
+              $newPath = "$currentPath;$INSTALL_DIR"
+              [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
+              Write-Host "Added $INSTALL_DIR to PATH. You may need to restart your terminal."
+          }
+          Write-Host "Installation complete. You can now run 'todo' from anywhere."
+          EOFPS
           else
             # Create shell installer
-            cat > install.sh << 'EOF'
-            #!/bin/bash
-            set -e
+            cat > install.sh << 'EOFSH'
+          #!/bin/bash
+          set -e
 
-            if [[ "$OSTYPE" == "darwin"* ]]; then
-                INSTALL_DIR="$HOME/bin"
-            else
-                INSTALL_DIR="$HOME/.local/bin"
-            fi
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+              INSTALL_DIR="$HOME/bin"
+          else
+              INSTALL_DIR="$HOME/.local/bin"
+          fi
 
-            mkdir -p "$INSTALL_DIR"
-            cp todo "$INSTALL_DIR/"
-            chmod +x "$INSTALL_DIR/todo"
+          mkdir -p "$INSTALL_DIR"
+          cp todo "$INSTALL_DIR/"
+          chmod +x "$INSTALL_DIR/todo"
 
-            echo "Installed todo to $INSTALL_DIR"
+          echo "Installed todo to $INSTALL_DIR"
 
-            if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
-                echo "Please add $INSTALL_DIR to your PATH to use todo from anywhere."
-                echo "For example, add this line to your shell profile:"
-                echo "  export PATH=\"\$PATH:$INSTALL_DIR\""
-            else
-                echo "You can now run 'todo' from anywhere."
-            fi
-            EOF
+          if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+              echo "Please add $INSTALL_DIR to your PATH to use todo from anywhere."
+              echo "For example, add this line to your shell profile:"
+              echo "  export PATH=\"\$PATH:$INSTALL_DIR\""
+          else
+              echo "You can now run 'todo' from anywhere."
+          fi
+          EOFSH
             chmod +x install.sh
           fi
 
