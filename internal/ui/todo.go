@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -21,30 +20,11 @@ type TodoItem struct {
 }
 
 func (i TodoItem) Title() string {
-	priorityMarker := map[models.Priority]string{
-		models.Low:    styling.GetStyledPriority(models.Low, true, false),
-		models.Medium: styling.GetStyledPriority(models.Medium, true, false),
-		models.High:   styling.GetStyledPriority(models.High, true, false),
-	}[i.todo.Priority]
-
-	return fmt.Sprintf("%s %s", priorityMarker, i.todo.Title)
+	return i.todo.Title
 }
 
 func (i TodoItem) Description() string {
-	var tags string
-	if len(i.todo.Tags) > 0 {
-		tags = fmt.Sprintf(" [%s]", strings.Join(i.todo.Tags, ", "))
-	}
-
-	var dueDate string
-	if i.todo.DueDate != nil {
-		dueDate = fmt.Sprintf(" (Due: %s)", i.todo.DueDate.Format("Jan 2"))
-	}
-
-	return fmt.Sprintf("%s%s%s",
-		truncateString(i.todo.Description, 50),
-		tags,
-		dueDate)
+	return i.todo.Description
 }
 
 func (i TodoItem) FilterValue() string {
@@ -61,15 +41,66 @@ func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 	if !ok {
 		return
 	}
+	width := m.Width() - 4
 
-	str := fmt.Sprintf("%d. %s", index+1, i.Title())
+	// Left-aligned elements
+	selected := styling.GetSelectedBlock(index == m.Index())
+	priorityMarker := styling.GetStyledPriority(i.todo.Priority, true, false)
+	title := styling.TextStyle.MarginRight(1).Render(i.Title())
 
-	fn := lipgloss.NewStyle().Foreground(styling.TextColor).Render
-	if index == m.Index() {
-		fn = styling.HoverStyle.Render
+	// Right-aligned elements
+	var rightElements []string
+
+	// Add tags
+	tags := ""
+	for _, tag := range i.todo.Tags {
+		tags += styling.GetStyledTag(tag)
+	}
+	if tags != "" {
+		rightElements = append(rightElements, tags)
 	}
 
-	fmt.Fprint(w, fn(str))
+	// Add due date if present
+	dueDate := ""
+	if i.todo.DueDate != nil {
+		dueDate = styling.GetStyledTimeStamp(*i.todo.DueDate, "Due:")
+		rightElements = append(rightElements, dueDate)
+	}
+
+	// Add updated at timestamp
+	updatedAt := styling.GetStyledTimeStamp(i.todo.UpdatedAt, "Updated:")
+	rightElements = append(rightElements, updatedAt)
+
+	// Join right elements
+	rightContent := lipgloss.JoinHorizontal(lipgloss.Right, rightElements...)
+	rightWidth := lipgloss.Width(rightContent)
+
+	// Calculate space for description
+	leftElementsWidth := lipgloss.Width(selected) + lipgloss.Width(priorityMarker) + lipgloss.Width(title)
+	descriptionMaxWidth := width - leftElementsWidth - rightWidth - 2 // 2 for some padding
+
+	// Truncate description if needed
+	description := i.todo.Description
+	if descriptionMaxWidth > 3 { // Need at least 3 chars for "..."
+		description = truncateString(description, descriptionMaxWidth)
+	} else {
+		description = ""
+	}
+
+	styledDescription := styling.SubtextStyle.Width(descriptionMaxWidth).Render(description)
+
+	// Assemble the row with left content taking remaining space and right content aligned to the right
+	leftContent := lipgloss.JoinHorizontal(lipgloss.Left, selected, priorityMarker, title, styledDescription)
+
+	// Join everything, ensuring right alignment for the right content
+	row := lipgloss.NewStyle().Width(width).Render(
+		lipgloss.JoinHorizontal(lipgloss.Left,
+			leftContent,
+			lipgloss.NewStyle().Width(width-lipgloss.Width(leftContent)).Align(lipgloss.Right).Render(rightContent),
+		),
+	)
+
+	fmt.Fprint(w, row)
 }
 
 type TodoModel struct {
