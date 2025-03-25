@@ -139,7 +139,7 @@ func GetStyledPriority(p models.Priority, selected, hovered bool) string {
 	return textStyle.Render(p.String())
 }
 
-func GetStyledTimeStamp(timeStamp time.Time, prefix string) string {
+func GetStyledUpdatedAt(timeStamp time.Time) string {
 	textStyle := lipgloss.NewStyle().
 		Foreground(Lavender).
 		Background(BackgroundColor).
@@ -147,10 +147,26 @@ func GetStyledTimeStamp(timeStamp time.Time, prefix string) string {
 		Align(lipgloss.Center).
 		MarginRight(1)
 
-	text := timeStamp.Format(time.Stamp)
-	if prefix != "" {
-		text = prefix + " " + text
+	text := "Updated: " + timeStamp.Format(time.Stamp)
+
+	return textStyle.Render(text)
+}
+
+func GetStyledDueDate(timeStamp time.Time, priority models.Priority) string {
+	priorityColors := []lipgloss.Color{
+		LowPriorityColor,
+		MediumPriorityColor,
+		HighPriorityColor,
 	}
+
+	textStyle := lipgloss.NewStyle().
+		Foreground(priorityColors[priority]).
+		Background(BackgroundColor).
+		Padding(0, 1).
+		Align(lipgloss.Center).
+		MarginRight(1)
+
+	text := "Due: " + timeStamp.Format(time.Stamp)
 
 	return textStyle.Render(text)
 }

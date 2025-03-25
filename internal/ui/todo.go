@@ -63,12 +63,12 @@ func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 	// Add due date if present
 	dueDate := ""
 	if i.todo.DueDate != nil {
-		dueDate = styling.GetStyledTimeStamp(*i.todo.DueDate, "Due:")
+		dueDate = styling.GetStyledDueDate(*i.todo.DueDate, i.todo.Priority)
 		rightElements = append(rightElements, dueDate)
 	}
 
 	// Add updated at timestamp
-	updatedAt := styling.GetStyledTimeStamp(i.todo.UpdatedAt, "Updated:")
+	updatedAt := styling.GetStyledUpdatedAt(i.todo.UpdatedAt)
 	rightElements = append(rightElements, updatedAt)
 
 	// Join right elements
