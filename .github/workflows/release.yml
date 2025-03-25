@@ -85,7 +85,10 @@ jobs:
           cp todo "$INSTALL_DIR/"
           chmod +x "$INSTALL_DIR/todo"
 
+          xattr -d com.apple.quarantine "$INSTALL_DIR/todo" 2>/dev/null || true
+
           echo "Installed todo to $INSTALL_DIR"
+          echo "The quarantine attribute has been removed to bypass Gatekeeper warnings."
 
           if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
               echo "Please add $INSTALL_DIR to your PATH to use todo from anywhere."
