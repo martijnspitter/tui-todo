@@ -77,8 +77,19 @@ jobs:
           set -e
 
           if [[ "$OSTYPE" == "darwin"* ]]; then
-              INSTALL_DIR="$HOME/bin"
+              # More macOS-specific approach
+              if [[ -d "/usr/local/bin" ]] && [[ -w "/usr/local/bin" ]]; then
+                  # If /usr/local/bin exists and is writable (common on Intel Macs)
+                  INSTALL_DIR="/usr/local/bin"
+              elif [[ -d "/opt/homebrew/bin" ]] && [[ -w "/opt/homebrew/bin" ]]; then
+                  # If Homebrew is installed on Apple Silicon Macs
+                  INSTALL_DIR="/opt/homebrew/bin"
+              else
+                  # Fallback to user's home directory
+                  INSTALL_DIR="$HOME/bin"
+              fi
           else
+              # Linux approach
               INSTALL_DIR="$HOME/.local/bin"
           fi
 
