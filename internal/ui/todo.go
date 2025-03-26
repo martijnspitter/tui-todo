@@ -48,6 +48,16 @@ func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 	priorityMarker := styling.GetStyledPriority(i.todo.Priority, true, false)
 	title := styling.TextStyle.MarginRight(1).Width(50).Render(truncateString(i.Title(), 50))
 
+	leftElementsWidth := lipgloss.Width(selected) + lipgloss.Width(priorityMarker) + lipgloss.Width(title)
+
+	if leftElementsWidth >= width {
+		widthAvailableForTitle := width - lipgloss.Width(selected) - 1
+		shortTitle := styling.TextStyle.MarginRight(1).Width(widthAvailableForTitle).Render(truncateString(i.Title(), widthAvailableForTitle))
+		row := lipgloss.JoinHorizontal(lipgloss.Center, selected, shortTitle)
+		fmt.Fprint(w, row)
+		return
+	}
+
 	// Right-aligned elements
 	var rightElements []string
 
@@ -76,12 +86,11 @@ func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 	rightWidth := lipgloss.Width(rightContent)
 
 	// Calculate space for description
-	leftElementsWidth := lipgloss.Width(selected) + lipgloss.Width(priorityMarker) + lipgloss.Width(title)
 	descriptionMaxWidth := width - leftElementsWidth - rightWidth - 2 // 2 for some padding
 
 	// Truncate description if needed
 	description := i.todo.Description
-	if descriptionMaxWidth > 3 { // Need at least 3 chars for "..."
+	if descriptionMaxWidth > 20 {
 		description = truncateString(description, descriptionMaxWidth)
 	} else {
 		description = ""
