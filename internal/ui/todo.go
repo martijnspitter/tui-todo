@@ -28,7 +28,7 @@ func (i TodoItem) Description() string {
 }
 
 func (i TodoItem) FilterValue() string {
-	return i.todo.Title
+	return i.todo.Title + i.todo.Description
 }
 
 type TodoItemDelegate struct{}
@@ -133,8 +133,9 @@ func NewTodoModel(appService *service.AppService) *TodoModel {
 	todoList.Title = ""
 	todoList.DisableQuitKeybindings()
 	todoList.SetShowTitle(false)
-	todoList.SetShowHelp(false)
+	todoList.SetShowHelp(true)
 	todoList.SetShowStatusBar(false)
+	todoList.SetFilteringEnabled(true)
 
 	footer := NewFooterModel(appService, tuiService)
 
@@ -166,12 +167,12 @@ func (m *TodoModel) Init() tea.Cmd {
 
 func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
+	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if m.showingModal {
 			// Handle modal
-			var cmd tea.Cmd
 			m.modalComponent, cmd = m.modalComponent.Update(msg)
 			return m, cmd
 		}
@@ -183,6 +184,9 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		):
 			if m.tuiService.SelectedPane == service.New {
 				m.tuiService.SelectedPane = service.Main
+			} else if m.list.ShowFilter() {
+				m.list, cmd = m.list.Update(msg)
+				return m, cmd
 			} else {
 				m.quitting = true
 				return m, tea.Quit
@@ -300,7 +304,6 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Update list
-	var cmd tea.Cmd
 	m.list, cmd = m.list.Update(msg)
 	cmds = append(cmds, cmd)
 
