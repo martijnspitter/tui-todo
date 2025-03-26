@@ -90,7 +90,7 @@ func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 
 	// Truncate description if needed
 	description := i.todo.Description
-	if descriptionMaxWidth > 20 { // Need at least 3 chars for "..."
+	if descriptionMaxWidth > 20 {
 		description = truncateString(description, descriptionMaxWidth)
 	} else {
 		description = ""
