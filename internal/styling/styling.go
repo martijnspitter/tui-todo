@@ -148,8 +148,9 @@ func GetStyledUpdatedAt(timeStamp time.Time) string {
 		MarginRight(1)
 
 	text := "Updated: " + timeStamp.Format(time.Stamp)
+	width := lipgloss.Width(text) + 2
 
-	return textStyle.Render(text)
+	return textStyle.Width(width).Render(text)
 }
 
 func GetStyledDueDate(timeStamp time.Time, priority models.Priority) string {
@@ -167,8 +168,9 @@ func GetStyledDueDate(timeStamp time.Time, priority models.Priority) string {
 		MarginRight(1)
 
 	text := "Due: " + timeStamp.Format(time.Stamp)
+	width := lipgloss.Width(text) + 2
 
-	return textStyle.Render(text)
+	return textStyle.Width(width).Render(text)
 }
 
 func GetStyledTag(tag string) string {

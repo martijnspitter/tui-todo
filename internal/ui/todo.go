@@ -50,7 +50,7 @@ func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 
 	leftElementsWidth := lipgloss.Width(selected) + lipgloss.Width(priorityMarker) + lipgloss.Width(title)
 
-	if leftElementsWidth <= width {
+	if leftElementsWidth >= width {
 		widthAvailableForTitle := width - lipgloss.Width(selected) - 1
 		shortTitle := styling.TextStyle.MarginRight(1).Width(widthAvailableForTitle).Render(truncateString(i.Title(), widthAvailableForTitle))
 		row := lipgloss.JoinHorizontal(lipgloss.Center, selected, shortTitle)
@@ -90,7 +90,7 @@ func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 
 	// Truncate description if needed
 	description := i.todo.Description
-	if descriptionMaxWidth > 3 { // Need at least 3 chars for "..."
+	if descriptionMaxWidth > 20 { // Need at least 3 chars for "..."
 		description = truncateString(description, descriptionMaxWidth)
 	} else {
 		description = ""
