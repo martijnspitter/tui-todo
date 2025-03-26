@@ -28,7 +28,7 @@ func (i TodoItem) Description() string {
 }
 
 func (i TodoItem) FilterValue() string {
-	return i.todo.Title + i.todo.Description
+	return i.todo.Title + " " + i.todo.Description
 }
 
 type TodoItemDelegate struct{}
