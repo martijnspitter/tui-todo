@@ -66,7 +66,7 @@ func (m *FooterModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.tuiService.KeyMap.Quit):
-			m.tuiService.SelectedPane = service.SelectedPane(msg.String()[0])
+			m.tuiService.SwitchToListView()
 		case key.Matches(msg, m.tuiService.KeyMap.Next):
 			if m.selectedInput == title {
 				m.SetSelectedPane(low)
@@ -108,8 +108,8 @@ func (m *FooterModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *FooterModel) View() string {
 	var priorityTabs []string
 	for p := models.Priority(0); p < 3; p++ {
-		selected := p == m.priority && m.tuiService.SelectedPane == service.New
-		hovered := m.selectedInput == selectedInput(int(p)) && m.tuiService.SelectedPane == service.New
+		selected := p == m.priority && m.tuiService.CurrentView == service.NewView
+		hovered := m.selectedInput == selectedInput(int(p)) && m.tuiService.CurrentView == service.NewView
 
 		priorityTab := styling.GetStyledPriority(p, selected, hovered)
 

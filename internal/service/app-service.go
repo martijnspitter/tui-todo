@@ -338,3 +338,72 @@ func sortTodos(todos []*models.Todo) []*models.Todo {
 
 	return todos
 }
+
+func (s *AppService) AdvanceStatus(todoID int64) (models.Status, error) {
+	todo, err := s.todoRepo.GetByID(todoID)
+	if err != nil {
+		log.Error("Failed to fetch todo for status change", "error", err, "id", todoID)
+		return 0, fmt.Errorf("couldn't fetch todo #%d: %w", todoID, err)
+	}
+
+	var newStatus models.Status
+	switch todo.Status {
+	case models.Open:
+		newStatus = models.Doing
+		err = s.MarkAsDoing(todoID)
+	case models.Doing:
+		newStatus = models.Done
+		err = s.MarkAsDone(todoID)
+	case models.Done:
+		newStatus = models.Archived
+		err = s.ArchiveTodo(todoID)
+	case models.Archived:
+		newStatus = models.Open
+		err = s.MarkAsOpen(todoID)
+	}
+
+	if err != nil {
+		log.Error("Failed to advance status", "error", err, "todoID", todoID, "fromStatus", todo.Status, "toStatus", newStatus)
+		return 0, fmt.Errorf("couldn't change todo #%d status from %s to %s: %w",
+			todoID, todo.Status, newStatus, err)
+	}
+
+	return newStatus, nil
+}
+
+func (s *AppService) GetFilteredTodos(mode FilterMode, status models.Status, tag string) ([]*models.Todo, error) {
+	var todos []*models.Todo
+	var err error
+
+	switch mode {
+	case StatusFilter:
+		switch status {
+		case models.Open:
+			todos, err = s.GetOpenTodos()
+		case models.Doing:
+			todos, err = s.GetActiveTodos()
+		case models.Done:
+			todos, err = s.GetCompletedTodos()
+		case models.Archived:
+			todos, err = s.GetArchivedTodos()
+		default:
+			err = fmt.Errorf("unknown status filter: %v", status)
+		}
+	case AllFilter:
+		todos, err = s.GetAllTodos()
+	case TagFilter:
+		if tag == "" {
+			err = fmt.Errorf("tag filter requires a tag")
+		} else {
+			todos, err = s.GetTodosByTag(tag)
+		}
+	default:
+		err = fmt.Errorf("unknown filter mode: %v", mode)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return todos, nil
+}

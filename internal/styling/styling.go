@@ -55,14 +55,20 @@ func GetStyledStatus(status models.Status, selected, omitNumber bool) string {
 	}
 
 	statusColor := statusColors[status]
+	text := status.String()
+	num := int(status) + 1
 
+	return GetStyledTagWithIndicator(num, text, statusColor, selected, omitNumber)
+}
+
+func GetStyledTagWithIndicator(num int, text string, color lipgloss.Color, selected, omitNumber bool) string {
 	// Create indicator with number
 	indicator := lipgloss.NewStyle().
 		Foreground(BlackColor).
-		Background(statusColor).
+		Background(color).
 		Padding(0, 1, 0, 0).
 		Bold(true).
-		Render(fmt.Sprintf("%d", int(status)+1))
+		Render(fmt.Sprintf("%d", num))
 
 	// Text section (status name)
 	var textStyle lipgloss.Style
@@ -72,13 +78,13 @@ func GetStyledStatus(status models.Status, selected, omitNumber bool) string {
 		// Active tab
 		textStyle = lipgloss.NewStyle().
 			Foreground(BlackColor).
-			Background(statusColor).
+			Background(color).
 			Padding(0, 0)
 		leftCapStyle = lipgloss.NewStyle().
-			Foreground(statusColor).
+			Foreground(color).
 			Padding(0, 0)
 		rightCapStyle = lipgloss.NewStyle().
-			Foreground(statusColor).
+			Foreground(color).
 			Padding(0, 0).
 			MarginRight(2)
 	} else {
@@ -88,7 +94,7 @@ func GetStyledStatus(status models.Status, selected, omitNumber bool) string {
 			Background(BackgroundColor).
 			Padding(0, 0)
 		leftCapStyle = lipgloss.NewStyle().
-			Foreground(statusColor).
+			Foreground(color).
 			Padding(0, 0)
 		rightCapStyle = lipgloss.NewStyle().
 			Foreground(BackgroundColor).
@@ -100,12 +106,12 @@ func GetStyledStatus(status models.Status, selected, omitNumber bool) string {
 		leftCapStyle.Foreground(BackgroundColor)
 	}
 
-	statusText := textStyle.Render(" " + status.String())
+	statusText := textStyle.Render(" " + text)
 	leftCap := leftCapStyle.Render("")
 	rightCap := rightCapStyle.Render("")
 
 	if omitNumber {
-		return lipgloss.JoinHorizontal(lipgloss.Center, leftCap, textStyle.Render(status.String()), rightCap)
+		return lipgloss.JoinHorizontal(lipgloss.Center, leftCap, textStyle.Render(text), rightCap)
 	}
 
 	// Combine indicator and text
