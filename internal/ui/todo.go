@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -116,11 +117,9 @@ type TodoModel struct {
 	service        *service.AppService
 	tuiService     *service.TuiService
 	list           list.Model
-	currentFilter  models.Status
 	width          int
 	height         int
 	quitting       bool
-	showingModal   bool
 	modalComponent tea.Model
 	footer         tea.Model
 }
@@ -141,11 +140,10 @@ func NewTodoModel(appService *service.AppService) *TodoModel {
 
 	// Create model
 	m := &TodoModel{
-		service:       appService,
-		tuiService:    tuiService,
-		list:          todoList,
-		currentFilter: models.Doing,
-		footer:        footer,
+		service:    appService,
+		tuiService: tuiService,
+		list:       todoList,
+		footer:     footer,
 	}
 
 	todos, err := appService.GetActiveTodos()
@@ -171,7 +169,7 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if m.showingModal {
+		if m.tuiService.ShouldShowModal() {
 			// Handle modal
 			m.modalComponent, cmd = m.modalComponent.Update(msg)
 			return m, cmd
@@ -182,9 +180,9 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg,
 			m.tuiService.KeyMap.Quit,
 		):
-			if m.tuiService.SelectedPane == service.New {
-				m.tuiService.SelectedPane = service.Main
-			} else if m.list.ShowFilter() {
+			if m.tuiService.CurrentView == service.NewView {
+				m.tuiService.SwitchToListView()
+			} else if m.list.FilterState() != 0 {
 				m.list, cmd = m.list.Update(msg)
 				return m, cmd
 			} else {
@@ -193,27 +191,14 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case key.Matches(msg, m.tuiService.KeyMap.SwitchPane):
-			if m.tuiService.SelectedPane == service.Main {
+			if m.tuiService.CurrentView == service.ListView {
 				switch key := msg.String(); key {
-				case "1":
-					m.tuiService.SelectedPane = service.Main
-					m.currentFilter = models.Open
+				case "1", "2", "3", "4", "5":
+					m.tuiService.SelectFilter(key)
 					return m, m.loadTodosCmd()
-				case "2":
-					m.tuiService.SelectedPane = service.Main
-					m.currentFilter = models.Doing
-					return m, m.loadTodosCmd()
-				case "3":
-					m.tuiService.SelectedPane = service.Main
-					m.currentFilter = models.Done
-					return m, m.loadTodosCmd()
-				case "4":
-					m.tuiService.SelectedPane = service.Main
-					m.currentFilter = models.Archived
-					return m, m.loadTodosCmd()
-
-				case "5":
-					m.tuiService.SelectedPane = service.New
+				case "6":
+					m.tuiService.SwitchToNewTodoView()
+					return m, nil
 				}
 			}
 
@@ -252,7 +237,7 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.list.SetSize(msg.Width, msg.Height-headerHeight-footerHeight)
 
 		// Pass size to modal if active
-		if m.showingModal && m.modalComponent != nil {
+		if m.tuiService.ShouldShowModal() && m.modalComponent != nil {
 			var cmd tea.Cmd
 			m.modalComponent, cmd = m.modalComponent.Update(msg)
 			cmds = append(cmds, cmd)
@@ -267,7 +252,7 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 
 	case todoCreatedMsg:
-		m.currentFilter = models.Open
+		m.tuiService.SwitchToListView()
 		cmds = append(cmds, m.loadTodosCmd())
 		cmds = append(cmds, ShowDefaultToast("Todo created", SuccessToast))
 
@@ -276,7 +261,7 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, ShowDefaultToast("Todo updated", SuccessToast))
 
 	case todoDeletedMsg:
-		m.showingModal = false
+		m.tuiService.SwitchToListView()
 		cmds = append(cmds, m.loadTodosCmd())
 		cmds = append(cmds, ShowDefaultToast("Todo deleted", SuccessToast))
 
@@ -290,13 +275,13 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, ShowDefaultToast(msg.Error(), ErrorToast))
 
 	case modalCloseMsg:
-		m.showingModal = false
+		m.tuiService.SwitchToListView()
 		if msg.reload {
 			cmds = append(cmds, m.loadTodosCmd())
 		}
 
 	case CreateTodoMsg:
-		m.tuiService.SelectedPane = service.Main
+		m.tuiService.SwitchToListView()
 		cmds = append(cmds, m.createTodoCmd(msg.Title, msg.Priority))
 
 	case showModalMsg:
@@ -308,12 +293,12 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	// Update text input
-	if m.tuiService.SelectedPane == service.New {
+	if m.tuiService.CurrentView == service.NewView {
 		m.footer, cmd = m.footer.Update(msg)
 		cmds = append(cmds, cmd)
 	}
 
-	if m.showingModal && m.modalComponent != nil {
+	if m.tuiService.ShouldShowModal() && m.modalComponent != nil {
 		m.modalComponent, cmd = m.modalComponent.Update(msg)
 		cmds = append(cmds, cmd)
 	}
@@ -325,7 +310,7 @@ func (m *TodoModel) View() string {
 	if m.quitting {
 		return ""
 	}
-	if m.showingModal && m.modalComponent != nil {
+	if m.tuiService.ShouldShowModal() && m.modalComponent != nil {
 		return m.modalComponent.View()
 	}
 
@@ -351,16 +336,33 @@ func (m *TodoModel) View() string {
 }
 
 func (m *TodoModel) HeaderView() string {
-	var tabs []string
+	var leftTabs []string
 
 	for status := models.Open; status <= models.Archived; status++ {
-		tab := styling.GetStyledStatus(status, m.currentFilter == status, false)
-
-		tabs = append(tabs, tab)
+		isSelected := m.tuiService.FilterState.Mode == service.StatusFilter &&
+			m.tuiService.FilterState.Status == status
+		tab := styling.GetStyledStatus(status, isSelected, false)
+		leftTabs = append(leftTabs, tab)
 	}
 
-	// Join all tabs
-	return lipgloss.JoinHorizontal(lipgloss.Center, tabs...)
+	leftContent := lipgloss.JoinHorizontal(lipgloss.Center, leftTabs...)
+
+	isAllSelected := m.tuiService.FilterState.Mode == service.AllFilter
+	allTab := styling.GetStyledTagWithIndicator(5, "All", styling.Rosewater, isAllSelected, false)
+
+	const minGap = 2
+	availableWidth := m.width - 2 // -2 for padding
+	leftWidth := lipgloss.Width(leftContent)
+	rightWidth := lipgloss.Width(allTab)
+
+	if leftWidth+minGap+rightWidth >= availableWidth {
+		return lipgloss.JoinHorizontal(lipgloss.Center, leftContent, allTab)
+	}
+
+	spacerWidth := availableWidth - leftWidth - rightWidth
+	spacer := strings.Repeat(" ", spacerWidth)
+
+	return lipgloss.JoinHorizontal(lipgloss.Center, leftContent, spacer, allTab)
 }
 
 func truncateString(s string, length int) string {
@@ -400,19 +402,7 @@ type modalCloseMsg struct {
 // Commands
 func (m *TodoModel) loadTodosCmd() tea.Cmd {
 	return func() tea.Msg {
-		var todos []*models.Todo
-		var err error
-
-		switch m.currentFilter {
-		case models.Open:
-			todos, err = m.service.GetOpenTodos()
-		case models.Doing:
-			todos, err = m.service.GetActiveTodos()
-		case models.Done:
-			todos, err = m.service.GetCompletedTodos()
-		case models.Archived:
-			todos, err = m.service.GetArchivedTodos()
-		}
+		todos, err := m.service.GetFilteredTodos(m.tuiService.FilterState.Mode, m.tuiService.FilterState.Status, m.tuiService.FilterState.Tag)
 
 		if err != nil {
 			return todoErrorMsg{err: err}
@@ -434,27 +424,7 @@ func (m *TodoModel) createTodoCmd(title string, priority models.Priority) tea.Cm
 
 func (m *TodoModel) advanceTodoStatusCmd(todoID int64) tea.Cmd {
 	return func() tea.Msg {
-		todo, err := m.service.GetTodo(todoID)
-		if err != nil {
-			return todoErrorMsg{err: err}
-		}
-
-		var newStatus models.Status
-		switch todo.Status {
-		case models.Open:
-			newStatus = models.Doing
-			err = m.service.MarkAsDoing(todoID)
-		case models.Doing:
-			newStatus = models.Done
-			err = m.service.MarkAsDone(todoID)
-		case models.Done:
-			newStatus = models.Archived
-			err = m.service.ArchiveTodo(todoID)
-		case models.Archived:
-			newStatus = models.Open
-			err = m.service.MarkAsOpen(todoID)
-		}
-
+		newStatus, err := m.service.AdvanceStatus(todoID)
 		if err != nil {
 			return todoErrorMsg{err: err}
 		}
@@ -465,7 +435,7 @@ func (m *TodoModel) advanceTodoStatusCmd(todoID int64) tea.Cmd {
 
 func (m *TodoModel) showEditModalCmd(todo *models.Todo) tea.Cmd {
 	return func() tea.Msg {
-		m.showingModal = true
+		m.tuiService.SwitchToEditTodoView()
 		m.modalComponent = NewTodoEditModal(todo, m.width, m.height, m.service, m.tuiService)
 		return showModalMsg{}
 	}
@@ -473,7 +443,7 @@ func (m *TodoModel) showEditModalCmd(todo *models.Todo) tea.Cmd {
 
 func (m *TodoModel) showConfirmDeleteCmd(todoID int64) tea.Cmd {
 	return func() tea.Msg {
-		m.showingModal = true
+		m.tuiService.SwitchToConfirmDeleteView()
 		m.modalComponent = NewConfirmDeleteModal(m.service, m.tuiService, todoID)
 		return showModalMsg{}
 	}
