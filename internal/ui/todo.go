@@ -114,15 +114,14 @@ func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 }
 
 type TodoModel struct {
-	service         *service.AppService
-	tuiService      *service.TuiService
-	list            list.Model
-	width           int
-	height          int
-	quitting        bool
-	modalComponent  tea.Model
-	footer          tea.Model
-	filterStatusBar tea.Model
+	service        *service.AppService
+	tuiService     *service.TuiService
+	list           list.Model
+	width          int
+	height         int
+	quitting       bool
+	modalComponent tea.Model
+	footer         tea.Model
 }
 
 func NewTodoModel(appService *service.AppService) *TodoModel {
@@ -138,15 +137,13 @@ func NewTodoModel(appService *service.AppService) *TodoModel {
 	todoList.SetFilteringEnabled(true)
 
 	footer := NewFooterModel(appService, tuiService)
-	filterStatusBar := NewFilterStatusBar(tuiService)
 
 	// Create model
 	m := &TodoModel{
-		service:         appService,
-		tuiService:      tuiService,
-		list:            todoList,
-		footer:          footer,
-		filterStatusBar: filterStatusBar,
+		service:    appService,
+		tuiService: tuiService,
+		list:       todoList,
+		footer:     footer,
 	}
 
 	todos, err := appService.GetActiveTodos()
@@ -255,6 +252,9 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.list.SetSize(msg.Width, msg.Height-headerHeight-footerHeight)
 
+		m.footer, cmd = m.footer.Update(msg)
+		cmds = append(cmds, cmd)
+
 		// Pass size to modal if active
 		if m.tuiService.ShouldShowModal() && m.modalComponent != nil {
 			var cmd tea.Cmd
@@ -299,10 +299,6 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.loadTodosCmd())
 		}
 
-	case CreateTodoMsg:
-		m.tuiService.SwitchToListView()
-		cmds = append(cmds, m.createTodoCmd(msg.Title, msg.Priority))
-
 	case showModalMsg:
 		return m, tea.WindowSize()
 	}
@@ -334,14 +330,12 @@ func (m *TodoModel) View() string {
 	}
 
 	header := m.HeaderView()
-	filterBar := m.filterStatusBar.View()
 	footer := m.footer.View()
 
 	headerHeight := lipgloss.Height(header)
 	footerHeight := lipgloss.Height(footer)
-	filterBarHeight := lipgloss.Height(filterBar)
 
-	m.list.SetHeight(m.height - headerHeight - footerHeight - filterBarHeight - 4)
+	m.list.SetHeight(m.height - headerHeight - footerHeight - 4)
 
 	// Main list
 	listView := lipgloss.NewStyle().Width(m.width - 2).Padding(styling.Padding).Render(m.list.View())
@@ -351,7 +345,6 @@ func (m *TodoModel) View() string {
 	return padding.Render(lipgloss.JoinVertical(
 		lipgloss.Top,
 		header,
-		filterBar,
 		listView,
 		footer,
 	))
