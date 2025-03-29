@@ -38,6 +38,18 @@ func StatusFilter(status models.Status) Filter {
 	}
 }
 
+func ArchivedFilter() Filter {
+	return func() (string, []any) {
+		return "archived = 1", []any{}
+	}
+}
+
+func NotArchivedFilter() Filter {
+	return func() (string, []any) {
+		return "archived = 0", []any{}
+	}
+}
+
 func PriorityFilter(minPriority models.Priority) Filter {
 	return func() (string, []any) {
 		return "priority >= ?", []any{minPriority}

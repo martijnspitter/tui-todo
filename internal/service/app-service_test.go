@@ -384,7 +384,7 @@ func TestGetAllTodos(t *testing.T) {
 			svc := service.NewAppService(mockRepo)
 
 			// Call method
-			todos, err := svc.GetAllTodos()
+			todos, err := svc.GetAllTodos(false)
 
 			// Check expectations
 			if tc.wantError {
@@ -635,11 +635,6 @@ func TestStatusChangeMethods(t *testing.T) {
 			methodName:     "MarkAsDone",
 			methodFunc:     func(svc *service.AppService, id int64) error { return svc.MarkAsDone(id) },
 			expectedStatus: models.Done,
-		},
-		{
-			methodName:     "ArchiveTodo",
-			methodFunc:     func(svc *service.AppService, id int64) error { return svc.ArchiveTodo(id) },
-			expectedStatus: models.Archived,
 		},
 	}
 
@@ -1325,7 +1320,7 @@ func TestSortTodos(t *testing.T) {
 	svc := service.NewAppService(mockRepo)
 
 	// Call one of the methods that uses sortTodos internally
-	todos, err := svc.GetAllTodos()
+	todos, err := svc.GetAllTodos(false)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}

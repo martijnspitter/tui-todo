@@ -3,15 +3,17 @@ package keys
 import "github.com/charmbracelet/bubbles/key"
 
 type KeyMap struct {
-	Next          key.Binding
-	Prev          key.Binding
-	SwitchPane    key.Binding
-	Select        key.Binding
-	Quit          key.Binding
-	New           key.Binding
-	Edit          key.Binding
-	Delete        key.Binding
-	AdvanceStatus key.Binding
+	Next           key.Binding
+	Prev           key.Binding
+	SwitchPane     key.Binding
+	Select         key.Binding
+	Quit           key.Binding
+	New            key.Binding
+	Edit           key.Binding
+	Delete         key.Binding
+	AdvanceStatus  key.Binding
+	Archive        key.Binding
+	ToggleArchived key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -42,15 +44,23 @@ func DefaultKeyMap() KeyMap {
 		),
 		Edit: key.NewBinding(
 			key.WithKeys("ctrl+e"),
-			key.WithHelp("ctrl+e", "edit todo"),
+			key.WithHelp("ctrl+e", "Edit Todo"),
 		),
 		Delete: key.NewBinding(
 			key.WithKeys("ctrl+d"),
-			key.WithHelp("ctrl+d", "delete todo"),
+			key.WithHelp("ctrl+d", "Delete Todo"),
 		),
 		AdvanceStatus: key.NewBinding(
-			key.WithKeys("ctrl+space", "ctrl+s"),
-			key.WithHelp("ctrl+space", "delete todo"),
+			key.WithKeys("ctrl+s"),
+			key.WithHelp("ctrl+s", "Save"),
+		),
+		Archive: key.NewBinding(
+			key.WithKeys("ctrl+a"),
+			key.WithHelp("ctrl+a", "archive/unarchive"),
+		),
+		ToggleArchived: key.NewBinding(
+			key.WithKeys("a"),
+			key.WithHelp("a", "toggle archived todos"),
 		),
 	}
 }
