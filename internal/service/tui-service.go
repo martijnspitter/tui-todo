@@ -21,9 +21,10 @@ type TuiService struct {
 }
 
 type FilterState struct {
-	Mode   FilterMode
-	Status models.Status
-	Tag    string
+	Mode            FilterMode
+	Status          models.Status
+	Tag             string
+	IncludeArchived bool
 }
 
 type FilterMode int
@@ -39,8 +40,9 @@ func NewTuiService() *TuiService {
 		KeyMap:      keys.DefaultKeyMap(),
 		CurrentView: ListView,
 		FilterState: FilterState{
-			Mode:   StatusFilter,
-			Status: models.Doing,
+			Mode:            StatusFilter,
+			Status:          models.Doing,
+			IncludeArchived: false,
 		},
 	}
 }
@@ -57,9 +59,6 @@ func (t *TuiService) SelectFilter(key string) {
 		t.FilterState.Mode = StatusFilter
 		t.FilterState.Status = models.Done
 	case "4":
-		t.FilterState.Mode = StatusFilter
-		t.FilterState.Status = models.Archived
-	case "5":
 		t.FilterState.Mode = AllFilter
 	}
 }
@@ -87,4 +86,10 @@ func (t *TuiService) ShouldShowModal() bool {
 func (t *TuiService) FilterByTag(tag string) {
 	t.FilterState.Mode = TagFilter
 	t.FilterState.Tag = tag
+}
+
+func (t *TuiService) ToggleArchivedInAllView() {
+	if t.FilterState.Mode == AllFilter {
+		t.FilterState.IncludeArchived = !t.FilterState.IncludeArchived
+	}
 }

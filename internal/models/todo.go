@@ -12,8 +12,6 @@ func (s Status) String() string {
 		return "Doing"
 	case Done:
 		return "Done"
-	case Archived:
-		return "Archived"
 	default:
 		return "Unknown"
 	}
@@ -23,7 +21,6 @@ const (
 	Open Status = iota
 	Doing
 	Done
-	Archived
 )
 
 type Priority int
@@ -57,4 +54,5 @@ type Todo struct {
 	Status      Status
 	Priority    Priority
 	Tags        []string
+	Archived    bool
 }

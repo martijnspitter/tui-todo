@@ -35,6 +35,15 @@ func NewSQLiteTodoRepository(version string) (*SQLiteTodoRepository, error) {
 		return nil, err
 	}
 
+	migrationManager := NewMigrationManager(db)
+	if err := migrationManager.Initialize(); err != nil {
+		return nil, fmt.Errorf("couldn't initialize migration manager: %w", err)
+	}
+
+	if err := migrationManager.ApplyMigrations(GetAllMigrations()); err != nil {
+		return nil, fmt.Errorf("couldn't apply migrations: %w", err)
+	}
+
 	return &SQLiteTodoRepository{db: db}, nil
 }
 
@@ -45,8 +54,8 @@ func (r *SQLiteTodoRepository) Close() error {
 func (r *SQLiteTodoRepository) Create(todo *models.Todo) error {
 	// Implementation with SQL
 	stmt, err := r.db.Prepare(`
-        INSERT INTO todos (title, description, status, created_at, updated_at, priority, due_date)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO todos (title, description, status, created_at, updated_at, priority, due_date, archived)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `)
 	if err != nil {
 		return err
@@ -61,6 +70,7 @@ func (r *SQLiteTodoRepository) Create(todo *models.Todo) error {
 		todo.UpdatedAt,
 		todo.Priority,
 		todo.DueDate,
+		todo.Archived,
 	)
 	if err != nil {
 		return err
@@ -79,7 +89,7 @@ func (r *SQLiteTodoRepository) GetByID(id int64) (*models.Todo, error) {
 	// Query to get todo with its tags in a single operation
 	rows, err := r.db.Query(`
         SELECT t.id, t.title, t.description, t.status, t.created_at, t.updated_at,
-               t.due_date, t.priority, tag.name as tag_name
+               t.due_date, t.priority, t.archived, tag.name as tag_name
         FROM todos t
         LEFT JOIN todo_tags tt ON t.id = tt.todo_id
         LEFT JOIN tags tag ON tt.tag_id = tag.id
@@ -104,6 +114,7 @@ func (r *SQLiteTodoRepository) GetByID(id int64) (*models.Todo, error) {
 		var dueDate sql.NullTime
 		var priority models.Priority
 		var tagName sql.NullString
+		var archived bool
 
 		// Scan row data
 		if err := rows.Scan(
@@ -115,6 +126,7 @@ func (r *SQLiteTodoRepository) GetByID(id int64) (*models.Todo, error) {
 			&updatedAt,
 			&dueDate,
 			&priority,
+			&archived,
 			&tagName,
 		); err != nil {
 			return nil, err
@@ -131,6 +143,7 @@ func (r *SQLiteTodoRepository) GetByID(id int64) (*models.Todo, error) {
 				UpdatedAt:   updatedAt,
 				Priority:    priority,
 				Tags:        []string{},
+				Archived:    archived,
 			}
 
 			if dueDate.Valid {
@@ -168,7 +181,7 @@ func (r *SQLiteTodoRepository) GetAll(filters ...Filter) ([]*models.Todo, error)
 	// Base query with joins to fetch todos and their tags
 	query := `
      SELECT t.id, t.title, t.description, t.status, t.created_at, t.updated_at,
-            t.due_date, t.priority, tag.name as tag_name
+            t.due_date, t.priority, t.archived, tag.name as tag_name
      FROM todos t
      LEFT JOIN todo_tags tt ON t.id = tt.todo_id
      LEFT JOIN tags tag ON tt.tag_id = tag.id
@@ -213,6 +226,7 @@ func (r *SQLiteTodoRepository) GetAll(filters ...Filter) ([]*models.Todo, error)
 		var dueDate sql.NullTime
 		var priority models.Priority
 		var tagName sql.NullString
+		var archived bool
 
 		// Scan the row
 		if err := rows.Scan(
@@ -224,6 +238,7 @@ func (r *SQLiteTodoRepository) GetAll(filters ...Filter) ([]*models.Todo, error)
 			&updatedAt,
 			&dueDate,
 			&priority,
+			&archived,
 			&tagName,
 		); err != nil {
 			return nil, err
@@ -240,6 +255,7 @@ func (r *SQLiteTodoRepository) GetAll(filters ...Filter) ([]*models.Todo, error)
 				CreatedAt:   createdAt,
 				UpdatedAt:   updatedAt,
 				Priority:    priority,
+				Archived:    archived,
 				Tags:        []string{},
 			}
 
@@ -283,7 +299,7 @@ func (r *SQLiteTodoRepository) GetAll(filters ...Filter) ([]*models.Todo, error)
 func (r *SQLiteTodoRepository) Update(todo *models.Todo) error {
 	stmt, err := r.db.Prepare(`
         UPDATE todos
-        SET title = ?, description = ?, status = ?, updated_at = ?, due_date = ?, priority = ?
+        SET title = ?, description = ?, status = ?, updated_at = ?, due_date = ?, priority = ?, archived = ?
         WHERE id = ?
     `)
 	if err != nil {
@@ -305,6 +321,7 @@ func (r *SQLiteTodoRepository) Update(todo *models.Todo) error {
 		time.Now(), // Update the updated_at time
 		dueDate,
 		todo.Priority,
+		todo.Archived,
 		todo.ID,
 	)
 	return err
@@ -316,21 +333,21 @@ func (r *SQLiteTodoRepository) Delete(id int64) error {
 }
 
 func (r *SQLiteTodoRepository) GetOpen() ([]*models.Todo, error) {
-	return r.GetAll(StatusFilter(models.Open))
+	return r.GetAll(StatusFilter(models.Open), NotArchivedFilter())
 }
 
 func (r *SQLiteTodoRepository) GetActive() ([]*models.Todo, error) {
-	return r.GetAll(StatusFilter(models.Doing))
+	return r.GetAll(StatusFilter(models.Doing), NotArchivedFilter())
 }
 
 // Get completed todos
 func (r *SQLiteTodoRepository) GetCompleted() ([]*models.Todo, error) {
-	return r.GetAll(StatusFilter(models.Done))
+	return r.GetAll(StatusFilter(models.Done), NotArchivedFilter())
 }
 
 // Get archived todos
 func (r *SQLiteTodoRepository) GetArchived() ([]*models.Todo, error) {
-	return r.GetAll(StatusFilter(models.Archived))
+	return r.GetAll(ArchivedFilter())
 }
 
 // Search todos
@@ -428,7 +445,7 @@ func (r *SQLiteTodoRepository) GetTodoTags(todoID int64) ([]string, error) {
 // FindTodosByTag returns todos with the specified tag
 func (r *SQLiteTodoRepository) FindTodosByTag(tagName string) ([]*models.Todo, error) {
 	rows, err := r.db.Query(`
-        SELECT t.id, t.title, t.description, t.status, t.created_at, t.updated_at, t.due_date, t.priority
+        SELECT t.id, t.title, t.description, t.status, t.created_at, t.updated_at, t.due_date, t.priority, t.archived
         FROM todos t
         JOIN todo_tags tt ON t.id = tt.todo_id
         JOIN tags tag ON tt.tag_id = tag.id
@@ -453,6 +470,7 @@ func (r *SQLiteTodoRepository) FindTodosByTag(tagName string) ([]*models.Todo, e
 			&todo.UpdatedAt,
 			&dueDate,
 			&todo.Priority,
+			&todo.Archived,
 		); err != nil {
 			return nil, err
 		}
@@ -488,7 +506,8 @@ func initSchema(db *sql.DB) error {
             created_at TIMESTAMP NOT NULL,
             updated_at TIMESTAMP NOT NULL,
             due_date TIMESTAMP,
-            priority INTEGER DEFAULT 0
+            priority INTEGER DEFAULT 0,
+            archived BOOLEAN DEFAULT 0
         )
     `)
 	if err != nil {

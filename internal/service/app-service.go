@@ -58,8 +58,12 @@ func (s *AppService) CreateTodo(title, description string, priority models.Prior
 	return nil
 }
 
-func (s *AppService) GetAllTodos() ([]*models.Todo, error) {
-	todos, err := s.todoRepo.GetAll()
+func (s *AppService) GetAllTodos(showArchived bool) ([]*models.Todo, error) {
+	archivedFilter := repository.NotArchivedFilter()
+	if showArchived {
+		archivedFilter = repository.ArchivedFilter()
+	}
+	todos, err := s.todoRepo.GetAll(archivedFilter)
 	if err != nil {
 		log.Error("Failed to fetch todos", "error", err)
 		return nil, fmt.Errorf("couldn't fetch todos: %w", err)
@@ -164,20 +168,39 @@ func (s *AppService) MarkAsDone(id int64) error {
 	return nil
 }
 
-func (s *AppService) ArchiveTodo(id int64) error {
-	todo, err := s.todoRepo.GetByID(id)
+func (s *AppService) ArchiveTodo(todoID int64) error {
+	todo, err := s.todoRepo.GetByID(todoID)
 	if err != nil {
-		log.Error("Failed to fetch todo for archiving", "error", err, "id", id)
-		return fmt.Errorf("couldn't fetch todo #%d: %w", id, err)
+		log.Error("Failed to fetch todo for archiving", "error", err, "id", todoID)
+		return fmt.Errorf("couldn't fetch todo #%d: %w", todoID, err)
 	}
 
-	todo.Status = models.Archived
+	todo.Archived = true
 	todo.UpdatedAt = time.Now()
 
 	err = s.todoRepo.Update(todo)
 	if err != nil {
-		log.Error("Failed to archive todo", "error", err, "id", id)
-		return fmt.Errorf("couldn't archive todo #%d: %w", id, err)
+		log.Error("Failed to archive todo", "error", err, "id", todoID)
+		return fmt.Errorf("couldn't archive todo #%d: %w", todoID, err)
+	}
+
+	return nil
+}
+
+func (s *AppService) UnarchiveTodo(todoID int64) error {
+	todo, err := s.todoRepo.GetByID(todoID)
+	if err != nil {
+		log.Error("Failed to fetch todo for unarchiving", "error", err, "id", todoID)
+		return fmt.Errorf("couldn't fetch todo #%d: %w", todoID, err)
+	}
+
+	todo.Archived = false
+	todo.UpdatedAt = time.Now()
+
+	err = s.todoRepo.Update(todo)
+	if err != nil {
+		log.Error("Failed to unarchive todo", "error", err, "id", todoID)
+		return fmt.Errorf("couldn't unarchive todo #%d: %w", todoID, err)
 	}
 
 	return nil
@@ -355,9 +378,6 @@ func (s *AppService) AdvanceStatus(todoID int64) (models.Status, error) {
 		newStatus = models.Done
 		err = s.MarkAsDone(todoID)
 	case models.Done:
-		newStatus = models.Archived
-		err = s.ArchiveTodo(todoID)
-	case models.Archived:
 		newStatus = models.Open
 		err = s.MarkAsOpen(todoID)
 	}
@@ -371,12 +391,13 @@ func (s *AppService) AdvanceStatus(todoID int64) (models.Status, error) {
 	return newStatus, nil
 }
 
-func (s *AppService) GetFilteredTodos(mode FilterMode, status models.Status, tag string) ([]*models.Todo, error) {
+func (s *AppService) GetFilteredTodos(mode FilterMode, status models.Status, tag string, showArchived bool) ([]*models.Todo, error) {
 	var todos []*models.Todo
 	var err error
 
 	switch mode {
 	case StatusFilter:
+		// Use existing helper methods but pass archived parameter
 		switch status {
 		case models.Open:
 			todos, err = s.GetOpenTodos()
@@ -384,13 +405,11 @@ func (s *AppService) GetFilteredTodos(mode FilterMode, status models.Status, tag
 			todos, err = s.GetActiveTodos()
 		case models.Done:
 			todos, err = s.GetCompletedTodos()
-		case models.Archived:
-			todos, err = s.GetArchivedTodos()
 		default:
 			err = fmt.Errorf("unknown status filter: %v", status)
 		}
 	case AllFilter:
-		todos, err = s.GetAllTodos()
+		todos, err = s.GetAllTodos(showArchived)
 	case TagFilter:
 		if tag == "" {
 			err = fmt.Errorf("tag filter requires a tag")

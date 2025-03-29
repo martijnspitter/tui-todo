@@ -48,10 +48,9 @@ var (
 
 func GetStyledStatus(status models.Status, selected, omitNumber bool) string {
 	statusColors := map[models.Status]lipgloss.Color{
-		models.Open:     OpenStatusColor,
-		models.Doing:    DoingStatusColor,
-		models.Done:     DoneStatusColor,
-		models.Archived: ArchivedStatusColor,
+		models.Open:  OpenStatusColor,
+		models.Doing: DoingStatusColor,
+		models.Done:  DoneStatusColor,
 	}
 
 	statusColor := statusColors[status]
