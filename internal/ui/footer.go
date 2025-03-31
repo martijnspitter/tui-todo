@@ -3,6 +3,7 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
 )
@@ -10,14 +11,16 @@ import (
 type FooterModel struct {
 	service    *service.AppService
 	tuiService *service.TuiService
+	translator *i18n.TranslationService
 	width      int
 	height     int
 }
 
-func NewFooterModel(service *service.AppService, tuiService *service.TuiService) *FooterModel {
+func NewFooterModel(service *service.AppService, tuiService *service.TuiService, translationService *i18n.TranslationService) *FooterModel {
 	return &FooterModel{
 		service:    service,
 		tuiService: tuiService,
+		translator: translationService,
 	}
 }
 
@@ -62,9 +65,9 @@ func (m *FooterModel) View() string {
 		// Create option for archived toggle
 		var archivedOption string
 		if m.tuiService.FilterState.IncludeArchived {
-			archivedOption = activeFilterStyle.Render("[A] Archived")
+			archivedOption = activeFilterStyle.Render(m.translator.T("footer.show_archived"))
 		} else {
-			archivedOption = filterOptionStyle.Render("[A] Archived")
+			archivedOption = filterOptionStyle.Render(m.translator.T("footer.hide_archived"))
 		}
 
 		// Collect all filter options

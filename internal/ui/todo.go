@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
@@ -11,6 +12,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
 
+	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
@@ -32,7 +34,9 @@ func (i TodoItem) FilterValue() string {
 	return i.todo.Title + " " + i.todo.Description
 }
 
-type TodoItemDelegate struct{}
+type TodoItemDelegate struct {
+	translator *i18n.TranslationService
+}
 
 func (d TodoItemDelegate) Height() int                             { return 1 }
 func (d TodoItemDelegate) Spacing() int                            { return 0 }
@@ -46,7 +50,8 @@ func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 
 	// Left-aligned elements
 	selected := styling.GetSelectedBlock(index == m.Index())
-	priorityMarker := styling.GetStyledPriority(i.todo.Priority, true, false)
+	translatedPriority := d.translator.T(i.todo.Priority.String())
+	priorityMarker := styling.GetStyledPriority(translatedPriority, i.todo.Priority, true, false)
 	title := styling.TextStyle.MarginRight(1).Width(50).Render(truncateString(i.Title(), 50))
 
 	leftElementsWidth := lipgloss.Width(selected) + lipgloss.Width(priorityMarker) + lipgloss.Width(title)
@@ -74,12 +79,14 @@ func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 	// Add due date if present
 	dueDate := ""
 	if i.todo.DueDate != nil {
-		dueDate = styling.GetStyledDueDate(*i.todo.DueDate, i.todo.Priority)
+		translatedDueDate := d.translator.Tf("ui.due", map[string]interface{}{"Time": i.todo.DueDate.Format(time.Stamp)})
+		dueDate = styling.GetStyledDueDate(translatedDueDate, i.todo.Priority)
 		rightElements = append(rightElements, dueDate)
 	}
 
 	// Add updated at timestamp
-	updatedAt := styling.GetStyledUpdatedAt(i.todo.UpdatedAt)
+	translatedUpdatedAt := d.translator.Tf("ui.updated", map[string]interface{}{"Time": i.todo.UpdatedAt.Format(time.Stamp)})
+	updatedAt := styling.GetStyledUpdatedAt(translatedUpdatedAt)
 	rightElements = append(rightElements, updatedAt)
 
 	// Join right elements
@@ -116,6 +123,7 @@ func (d TodoItemDelegate) Render(w io.Writer, m list.Model, index int, listItem 
 type TodoModel struct {
 	service        *service.AppService
 	tuiService     *service.TuiService
+	translator     *i18n.TranslationService
 	list           list.Model
 	width          int
 	height         int
@@ -124,11 +132,11 @@ type TodoModel struct {
 	footer         tea.Model
 }
 
-func NewTodoModel(appService *service.AppService) *TodoModel {
+func NewTodoModel(appService *service.AppService, translationService *i18n.TranslationService) *TodoModel {
 	tuiService := service.NewTuiService()
 
 	// Setup list
-	todoList := list.New([]list.Item{}, TodoItemDelegate{}, 0, 0)
+	todoList := list.New([]list.Item{}, TodoItemDelegate{translator: translationService}, 0, 0)
 	todoList.Title = ""
 	todoList.DisableQuitKeybindings()
 	todoList.SetShowTitle(false)
@@ -136,12 +144,13 @@ func NewTodoModel(appService *service.AppService) *TodoModel {
 	todoList.SetShowStatusBar(false)
 	todoList.SetFilteringEnabled(true)
 
-	footer := NewFooterModel(appService, tuiService)
+	footer := NewFooterModel(appService, tuiService, translationService)
 
 	// Create model
 	m := &TodoModel{
 		service:    appService,
 		tuiService: tuiService,
+		translator: translationService,
 		list:       todoList,
 		footer:     footer,
 	}
@@ -234,11 +243,12 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.tuiService.KeyMap.ToggleArchived):
 			if m.tuiService.FilterState.Mode == service.AllFilter {
 				m.tuiService.FilterState.IncludeArchived = !m.tuiService.FilterState.IncludeArchived
+				key := fmt.Sprintf("toast.filter_archived_%s",
+					map[bool]string{true: "shown", false: "hidden"}[m.tuiService.FilterState.IncludeArchived])
 				return m, tea.Batch(
 					m.loadTodosCmd(),
 					ShowDefaultToast(
-						fmt.Sprintf("Archived todos %s",
-							map[bool]string{true: "shown", false: "hidden"}[m.tuiService.FilterState.IncludeArchived]),
+						m.translator.T(key),
 						InfoToast),
 				)
 			}
@@ -273,21 +283,27 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case todoCreatedMsg:
 		m.tuiService.SwitchToListView()
 		cmds = append(cmds, m.loadTodosCmd())
-		cmds = append(cmds, ShowDefaultToast("Todo created", SuccessToast))
+		cmds = append(cmds, ShowDefaultToast(m.translator.T("toast.todo_created"), SuccessToast))
 
 	case todoUpdatedMsg:
 		cmds = append(cmds, m.loadTodosCmd())
-		cmds = append(cmds, ShowDefaultToast("Todo updated", SuccessToast))
+		cmds = append(cmds, ShowDefaultToast(m.translator.T("toast.todo_updated"), SuccessToast))
 
 	case todoDeletedMsg:
 		m.tuiService.SwitchToListView()
 		cmds = append(cmds, m.loadTodosCmd())
-		cmds = append(cmds, ShowDefaultToast("Todo deleted", SuccessToast))
+		cmds = append(cmds, ShowDefaultToast(m.translator.T("toast.todo_deleted"), SuccessToast))
 
 	case todoStatusChangedMsg:
 		cmds = append(cmds, m.loadTodosCmd())
 		cmds = append(cmds, ShowDefaultToast(
-			fmt.Sprintf("Todo status changed to %s", msg.newStatus),
+			m.translator.Tf("toast.status_changed", map[string]interface{}{"Status": m.translator.T(msg.newStatus)}),
+			SuccessToast))
+
+	case todoToggleArchived:
+		cmds = append(cmds, m.loadTodosCmd())
+		cmds = append(cmds, ShowDefaultToast(
+			m.translator.T(fmt.Sprintf("toast.%s", msg.action)),
 			SuccessToast))
 
 	case todoErrorMsg:
@@ -356,14 +372,15 @@ func (m *TodoModel) HeaderView() string {
 	for status := models.Open; status <= models.Done; status++ {
 		isSelected := m.tuiService.FilterState.Mode == service.StatusFilter &&
 			m.tuiService.FilterState.Status == status
-		tab := styling.GetStyledStatus(status, isSelected, false)
+		translatedStatus := m.translator.T(status.String())
+		tab := styling.GetStyledStatus(translatedStatus, status, isSelected, false)
 		leftTabs = append(leftTabs, tab)
 	}
 
 	leftContent := lipgloss.JoinHorizontal(lipgloss.Center, leftTabs...)
 
 	isAllSelected := m.tuiService.FilterState.Mode == service.AllFilter
-	allTab := styling.GetStyledTagWithIndicator(4, "All", styling.Rosewater, isAllSelected, false)
+	allTab := styling.GetStyledTagWithIndicator(4, m.translator.T("filter.all"), styling.Rosewater, isAllSelected, false)
 
 	const minGap = 2
 	availableWidth := m.width - 2 // -2 for padding
@@ -380,6 +397,9 @@ func (m *TodoModel) HeaderView() string {
 	return lipgloss.JoinHorizontal(lipgloss.Center, leftContent, spacer, allTab)
 }
 
+// ===========================================================================
+// Helpers
+// ===========================================================================
 func truncateString(s string, length int) string {
 	if len(s) <= length {
 		return s
@@ -387,7 +407,12 @@ func truncateString(s string, length int) string {
 	return s[:length-3] + "..."
 }
 
-// Message types
+// ===========================================================================
+// Message Types
+// ===========================================================================
+type todoToggleArchived struct {
+	action string
+}
 type todosLoadedMsg struct {
 	todos []*models.Todo
 }
@@ -414,7 +439,9 @@ type modalCloseMsg struct {
 	reload bool
 }
 
+// ===========================================================================
 // Commands
+// ===========================================================================
 func (m *TodoModel) loadTodosCmd() tea.Cmd {
 	return func() tea.Msg {
 		todos, err := m.service.GetFilteredTodos(
@@ -432,16 +459,6 @@ func (m *TodoModel) loadTodosCmd() tea.Cmd {
 	}
 }
 
-func (m *TodoModel) createTodoCmd(title string, priority models.Priority) tea.Cmd {
-	return func() tea.Msg {
-		err := m.service.CreateTodo(title, "", priority, []string{})
-		if err != nil {
-			return todoErrorMsg{err: err}
-		}
-		return todoCreatedMsg{}
-	}
-}
-
 func (m *TodoModel) advanceTodoStatusCmd(todoID int64) tea.Cmd {
 	return func() tea.Msg {
 		newStatus, err := m.service.AdvanceStatus(todoID)
@@ -456,7 +473,7 @@ func (m *TodoModel) advanceTodoStatusCmd(todoID int64) tea.Cmd {
 func (m *TodoModel) showEditModalCmd(todo *models.Todo) tea.Cmd {
 	return func() tea.Msg {
 		m.tuiService.SwitchToEditTodoView()
-		m.modalComponent = NewTodoEditModal(todo, m.width, m.height, m.service, m.tuiService)
+		m.modalComponent = NewTodoEditModal(todo, m.width, m.height, m.service, m.tuiService, m.translator)
 		return showModalMsg{}
 	}
 }
@@ -464,7 +481,7 @@ func (m *TodoModel) showEditModalCmd(todo *models.Todo) tea.Cmd {
 func (m *TodoModel) showConfirmDeleteCmd(todoID int64) tea.Cmd {
 	return func() tea.Msg {
 		m.tuiService.SwitchToConfirmDeleteView()
-		m.modalComponent = NewConfirmDeleteModal(m.service, m.tuiService, todoID)
+		m.modalComponent = NewConfirmDeleteModal(m.service, m.tuiService, m.translator, todoID)
 		return showModalMsg{}
 	}
 }
@@ -493,8 +510,8 @@ func (m *TodoModel) toggleArchiveCmd(todoID int64, isArchived bool) tea.Cmd {
 			action = "unarchived"
 		}
 
-		return todoStatusChangedMsg{
-			newStatus: fmt.Sprintf("Todo %s", action),
+		return todoToggleArchived{
+			action: action,
 		}
 	}
 }

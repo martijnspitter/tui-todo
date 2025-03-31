@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/log"
+	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
@@ -41,9 +42,10 @@ type TodoEditModal struct {
 	height       int
 	appService   *service.AppService
 	tuiService   *service.TuiService
+	translator   *i18n.TranslationService
 }
 
-func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.AppService, tuiService *service.TuiService) *TodoEditModal {
+func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.AppService, tuiService *service.TuiService, translationService *i18n.TranslationService) *TodoEditModal {
 	ti := textinput.New()
 	ti.SetValue(todo.Title)
 	ti.Focus()
@@ -146,7 +148,8 @@ func (m *TodoEditModal) View() string {
 		Width(m.width / 2).
 		BorderForeground(styling.Mauve)
 
-	status := styling.GetStyledStatus(m.todo.Status, true, true)
+	translatedStatus := m.translator.T(m.todo.Status.String())
+	status := styling.GetStyledStatus(translatedStatus, m.todo.Status, true, true)
 
 	// Priority display
 	var priorityTabs []string
@@ -154,7 +157,8 @@ func (m *TodoEditModal) View() string {
 		selected := p == m.priority
 		hovered := m.editState == editState(int(p)+4)
 
-		priorityTab := styling.GetStyledPriority(p, selected, hovered)
+		translatedPriority := m.translator.T(p.String())
+		priorityTab := styling.GetStyledPriority(translatedPriority, p, selected, hovered)
 
 		priorityTabs = append(priorityTabs, priorityTab)
 	}
@@ -162,14 +166,14 @@ func (m *TodoEditModal) View() string {
 	prioritySection := lipgloss.JoinHorizontal(lipgloss.Center, priorityTabs...)
 
 	// Title field
-	titleField := "Title"
+	titleField := m.translator.T("field.title")
 	if m.editState == editingTitle {
 		titleField = styling.FocusedStyle.Render(titleField)
 	}
 	title := fmt.Sprintf("%s\n%s", titleField, m.titleInput.View())
 
 	// Description field
-	descField := "Description"
+	descField := m.translator.T("field.description")
 	if m.editState == editingDescription {
 		descField = styling.FocusedStyle.Render(descField)
 	}
@@ -177,28 +181,28 @@ func (m *TodoEditModal) View() string {
 	description := fmt.Sprintf("%s\n%s", descField, m.descInput.View())
 
 	// Tags field
-	tagsField := "Tags (comma separated)"
+	tagsField := m.translator.T("field.tags")
 	if m.editState == editingTags {
 		tagsField = styling.FocusedStyle.Render(tagsField)
 	}
 	tags := fmt.Sprintf("%s\n%s", tagsField, m.tagsInput.View())
 
 	// Priority field
-	priorityField := "Priority"
+	priorityField := m.translator.T("field.priority")
 	if m.editState == editingPriorityLow || m.editState == editingPriorityMedium || m.editState == editingPriorityHigh {
 		priorityField = styling.FocusedStyle.Render(priorityField)
 	}
 
 	// Due Date field
-	dueDateField := "Due Date (YYYY-MM-DD HH:MM or empty to clear)"
+	dueDateField := m.translator.T("field.due_date")
 	if m.editState == editingDueDate {
 		dueDateField = styling.FocusedStyle.Render(dueDateField)
 	}
 	dueDate := fmt.Sprintf("%s\n%s", dueDateField, m.dueDateInput.View())
 
-	header := fmt.Sprintf("Editing Todo #%d", m.todo.ID)
+	header := m.translator.Tf("modal.edit_todo", map[string]interface{}{"ID": m.todo.ID})
 	if m.todo.ID == 0 {
-		header = "Create New Todo"
+		header = m.translator.T("modal.new_todo")
 	}
 
 	// Combine all content
@@ -211,7 +215,7 @@ func (m *TodoEditModal) View() string {
 		tags,
 		dueDate,
 		fmt.Sprintf("%s\n%s", priorityField, prioritySection),
-		styling.SubtextStyle.Render("ctrl+s: save  tab: next field  esc: cancel"),
+		styling.SubtextStyle.Render(m.translator.T("help.modal.instructions")),
 	)
 
 	// Center the modal
@@ -296,7 +300,7 @@ func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 			dueDate, err := time.Parse("2006-01-02 15:04", dueDateStr)
 			if err != nil {
 				log.Error("Invalid due date", err)
-				return todoErrorMsg{err: fmt.Errorf("invalid due date format: %w", err)}
+				return todoErrorMsg{err: fmt.Errorf(m.translator.T("error.due_date_invalid"))}
 			}
 			m.todo.DueDate = &dueDate
 		}

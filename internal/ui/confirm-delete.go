@@ -4,6 +4,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
 )
@@ -13,6 +14,7 @@ type todoDeletedMsg struct{}
 type ConfirmDeleteModel struct {
 	service      *service.AppService
 	tuiService   *service.TuiService
+	translator   *i18n.TranslationService
 	cancelButton Button
 	sendButton   Button
 	focused      int
@@ -21,7 +23,7 @@ type ConfirmDeleteModel struct {
 	height       int
 }
 
-func NewConfirmDeleteModal(appService *service.AppService, tuiService *service.TuiService, todoID int64) *ConfirmDeleteModel {
+func NewConfirmDeleteModal(appService *service.AppService, tuiService *service.TuiService, translationService *i18n.TranslationService, todoID int64) *ConfirmDeleteModel {
 	normalStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color(styling.SubtextColor)).
 		Padding(0, 1)
@@ -39,15 +41,16 @@ func NewConfirmDeleteModal(appService *service.AppService, tuiService *service.T
 	return &ConfirmDeleteModel{
 		service:    appService,
 		tuiService: tuiService,
+		translator: translationService,
 		todoID:     todoID,
 		cancelButton: Button{
-			Label:        "Cancel",
+			Label:        translationService.T("button.cancel"),
 			Focused:      true,
 			Style:        normalStyle,
 			FocusedStyle: cancelFocusedStyle,
 		},
 		sendButton: Button{
-			Label:        "Delete",
+			Label:        translationService.T("button.delete"),
 			Style:        normalStyle,
 			FocusedStyle: focusedStyle,
 		},
@@ -119,7 +122,7 @@ func (m *ConfirmDeleteModel) View() string {
 		Width(m.width / 2).
 		AlignHorizontal(lipgloss.Center).
 		MarginBottom(2).
-		Render("Are you sure you want to delete this todo?")
+		Render(m.translator.T("modal.confirm_delete"))
 	buttons := styling.
 		FocusedStyle.
 		Width(m.width/2).
