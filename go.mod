@@ -9,7 +9,9 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.4
 	github.com/charmbracelet/lipgloss v1.0.0
 	github.com/charmbracelet/log v0.4.1
+	github.com/nicksnyder/go-i18n/v2 v2.5.1
 	github.com/rmhubbert/bubbletea-overlay v0.3.2
+	golang.org/x/text v0.21.0
 	modernc.org/sqlite v1.36.2
 )
 
@@ -36,7 +38,6 @@ require (
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
 	modernc.org/libc v1.61.13 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.8.2 // indirect

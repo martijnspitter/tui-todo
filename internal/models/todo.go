@@ -7,13 +7,13 @@ type Status int
 func (s Status) String() string {
 	switch s {
 	case Open:
-		return "Open"
+		return "status.open"
 	case Doing:
-		return "Doing"
+		return "status.doing"
 	case Done:
-		return "Done"
+		return "status.done"
 	default:
-		return "Unknown"
+		return "status.unknown"
 	}
 }
 
@@ -28,13 +28,13 @@ type Priority int
 func (p Priority) String() string {
 	switch p {
 	case Low:
-		return "Low"
+		return "priority.low"
 	case Medium:
-		return "Medium"
+		return "priority.medium"
 	case High:
-		return "High"
+		return "priority.high"
 	default:
-		return "Unknown"
+		return "priority.unknown"
 	}
 }
 

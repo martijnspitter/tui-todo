@@ -2,7 +2,6 @@ package styling
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martijnspitter/tui-todo/internal/models"
@@ -46,7 +45,7 @@ var (
 	Padding     = 1
 )
 
-func GetStyledStatus(status models.Status, selected, omitNumber bool) string {
+func GetStyledStatus(translatedStatus string, status models.Status, selected, omitNumber bool) string {
 	statusColors := map[models.Status]lipgloss.Color{
 		models.Open:  OpenStatusColor,
 		models.Doing: DoingStatusColor,
@@ -54,10 +53,8 @@ func GetStyledStatus(status models.Status, selected, omitNumber bool) string {
 	}
 
 	statusColor := statusColors[status]
-	text := status.String()
-	num := int(status) + 1
 
-	return GetStyledTagWithIndicator(num, text, statusColor, selected, omitNumber)
+	return GetStyledTagWithIndicator(int(status)+1, translatedStatus, statusColor, selected, omitNumber)
 }
 
 func GetStyledTagWithIndicator(num int, text string, color lipgloss.Color, selected, omitNumber bool) string {
@@ -117,7 +114,7 @@ func GetStyledTagWithIndicator(num int, text string, color lipgloss.Color, selec
 	return lipgloss.JoinHorizontal(lipgloss.Center, leftCap, indicator, statusText, rightCap)
 }
 
-func GetStyledPriority(p models.Priority, selected, hovered bool) string {
+func GetStyledPriority(translatedP string, p models.Priority, selected, hovered bool) string {
 	priorityColors := []lipgloss.Color{
 		LowPriorityColor,
 		MediumPriorityColor,
@@ -141,10 +138,10 @@ func GetStyledPriority(p models.Priority, selected, hovered bool) string {
 		Align(lipgloss.Center).
 		MarginRight(1)
 
-	return textStyle.Render(p.String())
+	return textStyle.Render(translatedP)
 }
 
-func GetStyledUpdatedAt(timeStamp time.Time) string {
+func GetStyledUpdatedAt(text string) string {
 	textStyle := lipgloss.NewStyle().
 		Foreground(Lavender).
 		Background(BackgroundColor).
@@ -152,13 +149,12 @@ func GetStyledUpdatedAt(timeStamp time.Time) string {
 		Align(lipgloss.Center).
 		MarginRight(1)
 
-	text := "Updated: " + timeStamp.Format(time.Stamp)
 	width := lipgloss.Width(text) + 2
 
 	return textStyle.Width(width).Render(text)
 }
 
-func GetStyledDueDate(timeStamp time.Time, priority models.Priority) string {
+func GetStyledDueDate(text string, priority models.Priority) string {
 	priorityColors := []lipgloss.Color{
 		LowPriorityColor,
 		MediumPriorityColor,
@@ -172,7 +168,6 @@ func GetStyledDueDate(timeStamp time.Time, priority models.Priority) string {
 		Align(lipgloss.Center).
 		MarginRight(1)
 
-	text := "Due: " + timeStamp.Format(time.Stamp)
 	width := lipgloss.Width(text) + 2
 
 	return textStyle.Width(width).Render(text)

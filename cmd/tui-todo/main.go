@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/log"
 	_ "modernc.org/sqlite"
 
+	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/logger"
 	"github.com/martijnspitter/tui-todo/internal/repository"
 	"github.com/martijnspitter/tui-todo/internal/service"
@@ -34,9 +35,13 @@ func main() {
 	}
 	defer todoRepo.Close()
 
+	translationService, err := i18n.NewTranslationService("en")
+	if err != nil {
+		log.Fatal(err)
+	}
 	service := service.NewAppService(todoRepo)
 
-	baseModel := ui.NewBaseModel(service)
+	baseModel := ui.NewBaseModel(service, translationService)
 
 	// Initialize TUI with endpoints as options
 	p := tea.NewProgram(
