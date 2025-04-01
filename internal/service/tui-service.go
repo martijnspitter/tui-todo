@@ -9,8 +9,7 @@ type ViewType int
 
 const (
 	ListView ViewType = iota
-	NewView
-	EditView
+	AddEditView
 	ConfirmDelete
 )
 
@@ -33,6 +32,7 @@ const (
 	StatusFilter FilterMode = iota
 	AllFilter
 	TagFilter
+	NameDescFilter
 )
 
 func NewTuiService() *TuiService {
@@ -47,7 +47,7 @@ func NewTuiService() *TuiService {
 	}
 }
 
-func (t *TuiService) SelectFilter(key string) {
+func (t *TuiService) SwitchPane(key string) {
 	switch key {
 	case "1":
 		t.FilterState.Mode = StatusFilter
@@ -63,8 +63,12 @@ func (t *TuiService) SelectFilter(key string) {
 	}
 }
 
-func (t *TuiService) SwitchToNewTodoView() {
-	t.CurrentView = NewView
+func (t *TuiService) ActivateNameFilter() {
+	t.FilterState.Mode = NameDescFilter
+}
+
+func (t *TuiService) RemoveNameFilter() {
+	t.FilterState.Mode = StatusFilter
 }
 
 func (t *TuiService) SwitchToListView() {
@@ -72,7 +76,7 @@ func (t *TuiService) SwitchToListView() {
 }
 
 func (t *TuiService) SwitchToEditTodoView() {
-	t.CurrentView = EditView
+	t.CurrentView = AddEditView
 }
 
 func (t *TuiService) SwitchToConfirmDeleteView() {
@@ -80,7 +84,7 @@ func (t *TuiService) SwitchToConfirmDeleteView() {
 }
 
 func (t *TuiService) ShouldShowModal() bool {
-	return t.CurrentView == EditView || t.CurrentView == ConfirmDelete
+	return t.CurrentView == AddEditView || t.CurrentView == ConfirmDelete
 }
 
 func (t *TuiService) FilterByTag(tag string) {

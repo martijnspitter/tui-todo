@@ -14,53 +14,88 @@ type KeyMap struct {
 	AdvanceStatus  key.Binding
 	Archive        key.Binding
 	ToggleArchived key.Binding
+	Help           key.Binding
+	Filter         key.Binding
+	Up             key.Binding
+	Down           key.Binding
+	Cancel         key.Binding
+	Home           key.Binding
+	End            key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
 	return KeyMap{
 		Next: key.NewBinding(
 			key.WithKeys("right", "tab"),
-			key.WithHelp("right/tab", "Go next"),
+			key.WithHelp("right/tab", "help.right_tab"),
 		),
 		Prev: key.NewBinding(
 			key.WithKeys("left", "shift+tab"),
-			key.WithHelp("left/shift+tab", "Go previous"),
+			key.WithHelp("left/shift+tab", "help.left_shift_tab"),
 		),
 		SwitchPane: key.NewBinding(
-			key.WithKeys("1", "2", "3", "4", "5", "6"),
-			key.WithHelp("1-6", "Select Pane"),
+			key.WithKeys("1", "2", "3", "4"),
+			key.WithHelp("1-4", "help.1_4"),
 		),
 		Select: key.NewBinding(
 			key.WithKeys("enter"),
-			key.WithHelp("enter", "Select"),
+			key.WithHelp("enter", "help.enter"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("ctrl+c", "esc"),
-			key.WithHelp("ctrl+c/esc", "Close application"),
+			key.WithHelp("ctrl+c/esc", "help.ctrl_c_esc"),
 		),
 		New: key.NewBinding(
 			key.WithKeys("ctrl+n"),
-			key.WithHelp("ctrl+n", "New Todo"),
+			key.WithHelp("ctrl+n", "help.ctrl_n"),
 		),
 		Edit: key.NewBinding(
 			key.WithKeys("ctrl+e"),
-			key.WithHelp("ctrl+e", "Edit Todo"),
+			key.WithHelp("ctrl+e", "help.ctrl_e"),
 		),
 		Delete: key.NewBinding(
 			key.WithKeys("ctrl+d"),
-			key.WithHelp("ctrl+d", "Delete Todo"),
+			key.WithHelp("ctrl+d", "help.ctrl_d"),
 		),
 		AdvanceStatus: key.NewBinding(
 			key.WithKeys("ctrl+s"),
-			key.WithHelp("ctrl+s", "Save"),
+			key.WithHelp("ctrl+s", "help.ctrl_s"),
 		),
 		Archive: key.NewBinding(
 			key.WithKeys("ctrl+a"),
-			key.WithHelp("ctrl+a", "archive/unarchive"),
+			key.WithHelp("ctrl+a", "help.ctrl_a"),
 		),
 		ToggleArchived: key.NewBinding(
 			key.WithKeys("a"),
-			key.WithHelp("a", "toggle archived todos"),
+			key.WithHelp("a", "help.a"),
+		),
+		Help: key.NewBinding(
+			key.WithKeys("?"),
+			key.WithHelp("?", "help.toggle"),
+		),
+		Up: key.NewBinding(
+			key.WithKeys("k", "↑"),
+			key.WithHelp("↑/k", "help.up"),
+		),
+		Down: key.NewBinding(
+			key.WithKeys("j", "↓"),
+			key.WithHelp("↓/j", "help.down"),
+		),
+		Filter: key.NewBinding(
+			key.WithKeys("/"),
+			key.WithHelp("/", "help.filter"),
+		),
+		Cancel: key.NewBinding(
+			key.WithKeys("esc"),
+			key.WithHelp("esc", "help.cancel"),
+		),
+		Home: key.NewBinding(
+			key.WithKeys("home", "g"),
+			key.WithHelp("g/home", "help.home"),
+		),
+		End: key.NewBinding(
+			key.WithKeys("G", "end"),
+			key.WithHelp("G/end", "help.end"),
 		),
 	}
 }

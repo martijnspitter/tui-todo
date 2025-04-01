@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martijnspitter/tui-todo/internal/i18n"
@@ -14,13 +15,16 @@ type FooterModel struct {
 	translator *i18n.TranslationService
 	width      int
 	height     int
+	help       tea.Model
 }
 
 func NewFooterModel(service *service.AppService, tuiService *service.TuiService, translationService *i18n.TranslationService) *FooterModel {
+	help := NewHelpModel(service, tuiService, translationService)
 	return &FooterModel{
 		service:    service,
 		tuiService: tuiService,
 		translator: translationService,
+		help:       help,
 	}
 }
 
@@ -33,6 +37,11 @@ func (m *FooterModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, m.tuiService.KeyMap.Help):
+			m.help.(*HelpModel).ToggleShowAll()
+		}
 	}
 	return m, nil
 }
@@ -87,7 +96,8 @@ func (m *FooterModel) View() string {
 	}
 
 	// Join everything
-	fullContent := lipgloss.JoinHorizontal(lipgloss.Left, content)
+	helpText := m.help.View()
+	statusBar := lipgloss.JoinHorizontal(lipgloss.Left, content)
 
-	return footerStyle.Render(fullContent)
+	return lipgloss.JoinVertical(lipgloss.Center, helpText, footerStyle.Render(statusBar))
 }
