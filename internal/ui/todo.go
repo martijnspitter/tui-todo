@@ -140,7 +140,7 @@ func NewTodoModel(appService *service.AppService, translationService *i18n.Trans
 	todoList.Title = ""
 	todoList.DisableQuitKeybindings()
 	todoList.SetShowTitle(false)
-	todoList.SetShowHelp(true)
+	todoList.SetShowHelp(false)
 	todoList.SetShowStatusBar(false)
 	todoList.SetFilteringEnabled(true)
 
@@ -189,9 +189,10 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg,
 			m.tuiService.KeyMap.Quit,
 		):
-			if m.tuiService.CurrentView == service.NewView {
+			if m.tuiService.CurrentView == service.AddEditView {
 				m.tuiService.SwitchToListView()
 			} else if m.list.FilterState() != 0 {
+				m.tuiService.RemoveNameFilter()
 				m.list, cmd = m.list.Update(msg)
 				return m, cmd
 			} else {
@@ -199,15 +200,17 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 
+		case key.Matches(msg, m.tuiService.KeyMap.Filter):
+			m.tuiService.ActivateNameFilter()
+			m.list, cmd = m.list.Update(msg)
+			return m, cmd
+
 		case key.Matches(msg, m.tuiService.KeyMap.SwitchPane):
 			if m.tuiService.CurrentView == service.ListView {
 				switch key := msg.String(); key {
 				case "1", "2", "3", "4":
-					m.tuiService.SelectFilter(key)
+					m.tuiService.SwitchPane(key)
 					return m, m.loadTodosCmd()
-				case "5":
-					m.tuiService.SwitchToNewTodoView()
-					return m, nil
 				}
 			}
 
@@ -324,7 +327,7 @@ func (m *TodoModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	// Update text input
-	if m.tuiService.CurrentView == service.NewView {
+	if m.tuiService.CurrentView == service.ListView {
 		m.footer, cmd = m.footer.Update(msg)
 		cmds = append(cmds, cmd)
 	}
