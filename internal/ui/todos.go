@@ -81,6 +81,9 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch {
+		case !key.Matches(msg, m.tuiService.KeyMap.Quit) && m.tuiService.ShowConfirmQuit:
+			m.tuiService.ToggleShowConfirmQuit()
+
 		case key.Matches(
 			msg,
 			m.tuiService.KeyMap.Quit,
@@ -91,6 +94,8 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.tuiService.RemoveNameFilter()
 				m.list, cmd = m.list.Update(msg)
 				return m, cmd
+			} else if !m.tuiService.ShowConfirmQuit {
+				m.tuiService.ToggleShowConfirmQuit()
 			} else {
 				m.quitting = true
 				return m, tea.Quit

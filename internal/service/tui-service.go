@@ -14,9 +14,10 @@ const (
 )
 
 type TuiService struct {
-	KeyMap      keys.KeyMap
-	CurrentView ViewType
-	FilterState FilterState
+	KeyMap          keys.KeyMap
+	CurrentView     ViewType
+	FilterState     FilterState
+	ShowConfirmQuit bool
 }
 
 type FilterState struct {
@@ -61,6 +62,10 @@ func (t *TuiService) SwitchPane(key string) {
 	case "4":
 		t.FilterState.Mode = AllFilter
 	}
+}
+
+func (t *TuiService) ToggleShowConfirmQuit() {
+	t.ShowConfirmQuit = !t.ShowConfirmQuit
 }
 
 func (t *TuiService) ActivateNameFilter() {
