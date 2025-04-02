@@ -98,7 +98,7 @@ func (m *FooterModel) View() string {
 	// Join everything
 	helpText := m.help.View()
 	if m.tuiService.ShowConfirmQuit {
-		helpText = styling.SubtextStyle.Render("Really quit? (Press ctrl+c/esc again to quit)")
+		helpText = lipgloss.NewStyle().Foreground(styling.HelpTextColor).Render("Really quit? (Press ctrl+c/esc again to quit)")
 	}
 	statusBar := lipgloss.JoinHorizontal(lipgloss.Left, content)
 

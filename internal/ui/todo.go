@@ -11,6 +11,7 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/styling"
+	"slices"
 )
 
 type TodoItem struct {
@@ -47,9 +48,16 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 	selected := styling.GetSelectedBlock(index == m.Index())
 	translatedPriority := d.translator.T(i.todo.Priority.String())
 	priorityMarker := styling.GetStyledPriority(translatedPriority, i.todo.Priority, true, false)
-	title := styling.TextStyle.MarginRight(1).Width(50).Render(truncateString(i.Title(), 50))
+	title := styling.TextStyle.MarginRight(1).Width(20).Render(truncateString(i.Title(), 20))
 
 	leftElementsWidth := lipgloss.Width(selected) + lipgloss.Width(priorityMarker) + lipgloss.Width(title)
+	descMaxWidth := width - leftElementsWidth
+	descStr := ""
+	if descMaxWidth > 50 {
+		descStr = styling.SubtextStyle.Width(50).Render(truncateString(i.Description(), 50))
+	} else {
+		descStr = ""
+	}
 
 	if leftElementsWidth >= width {
 		widthAvailableForTitle := width - lipgloss.Width(selected) - 1
@@ -58,53 +66,89 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 		fmt.Fprint(w, row)
 		return
 	}
+	leftElementsWithDescWidth := leftElementsWidth + lipgloss.Width(descStr)
 
-	// Right-aligned elements
 	var rightElements []string
 
-	// Add tags
-	tags := ""
-	for _, tag := range i.todo.Tags {
-		tags += styling.GetStyledTag(tag)
+	rightAvailableWidth := width - leftElementsWithDescWidth - 2
+
+	type elementInfo struct {
+		element  string
+		index    int
+		priority int
 	}
-	if tags != "" {
-		rightElements = append(rightElements, tags)
-	}
+	var elementsToCheck []elementInfo
 
 	// Add due date if present
 	dueDate := ""
 	if i.todo.DueDate != nil {
 		translatedDueDate := d.translator.Tf("ui.due", map[string]interface{}{"Time": i.todo.DueDate.Format(time.Stamp)})
 		dueDate = styling.GetStyledDueDate(translatedDueDate, i.todo.Priority)
-		rightElements = append(rightElements, dueDate)
+		elementsToCheck = append(elementsToCheck, struct {
+			element  string
+			index    int
+			priority int
+		}{dueDate, 1, 3})
 	}
 
-	// Add updated at timestamp
+	tags := ""
+	for _, tag := range i.todo.Tags {
+		tags += styling.GetStyledTag(tag)
+	}
+	if tags != "" {
+		elementsToCheck = append(elementsToCheck, struct {
+			element  string
+			index    int
+			priority int
+		}{tags, 2, 1})
+	}
+
 	translatedUpdatedAt := d.translator.Tf("ui.updated", map[string]interface{}{"Time": i.todo.UpdatedAt.Format(time.Stamp)})
 	updatedAt := styling.GetStyledUpdatedAt(translatedUpdatedAt)
-	rightElements = append(rightElements, updatedAt)
+	elementsToCheck = append(elementsToCheck, struct {
+		element  string
+		index    int
+		priority int
+	}{updatedAt, 4, 3})
 
-	// Join right elements
-	rightContent := lipgloss.JoinHorizontal(lipgloss.Right, rightElements...)
-	rightWidth := lipgloss.Width(rightContent)
+	for {
+		// Calculate total width of current elements
+		totalWidth := 0
+		for _, item := range elementsToCheck {
+			totalWidth += lipgloss.Width(item.element)
+		}
 
-	// Calculate space for description
-	descriptionMaxWidth := width - leftElementsWidth - rightWidth - 2 // 2 for some padding
+		// If everything fits, we're done
+		if totalWidth <= rightAvailableWidth || len(elementsToCheck) == 0 {
+			break
+		}
 
-	// Truncate description if needed
-	description := i.todo.Description
-	if descriptionMaxWidth > 20 {
-		description = truncateString(description, descriptionMaxWidth)
-	} else {
-		description = ""
+		// Find and remove lowest priority element
+		lowestPriorityIdx := 0
+		lowestPriority := 0
+
+		for idx, item := range elementsToCheck {
+			if item.index > lowestPriority {
+				lowestPriority = item.index
+				lowestPriorityIdx = idx
+			}
+		}
+
+		// Remove the lowest priority element
+		elementsToCheck = slices.Delete(elementsToCheck, lowestPriorityIdx, lowestPriorityIdx+1)
 	}
 
-	styledDescription := styling.SubtextStyle.Width(descriptionMaxWidth).Render(description)
+	slices.SortFunc(elementsToCheck, func(a, b elementInfo) int {
+		return a.priority - b.priority
+	})
 
-	// Assemble the row with left content taking remaining space and right content aligned to the right
-	leftContent := lipgloss.JoinHorizontal(lipgloss.Left, selected, priorityMarker, title, styledDescription)
+	for _, item := range elementsToCheck {
+		rightElements = append(rightElements, item.element)
+	}
 
-	// Join everything, ensuring right alignment for the right content
+	rightContent := lipgloss.JoinHorizontal(lipgloss.Right, rightElements...)
+	leftContent := lipgloss.JoinHorizontal(lipgloss.Left, selected, priorityMarker, title, descStr)
+
 	row := lipgloss.NewStyle().Width(width).Render(
 		lipgloss.JoinHorizontal(lipgloss.Left,
 			leftContent,

@@ -26,7 +26,8 @@ var (
 	BlackColor = lipgloss.Color("#11111b")
 
 	TextColor       = lipgloss.Color("#cdd6f4")
-	SubtextColor    = lipgloss.Color("#626262")
+	SubtextColor    = lipgloss.Color("#a6adc8")
+	HelpTextColor   = lipgloss.Color("#626262")
 	BackgroundColor = lipgloss.Color("#313244")
 	RowColor        = lipgloss.Color("#1e1e2e")
 

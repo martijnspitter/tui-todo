@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 
+	"github.com/charmbracelet/log"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 )
@@ -66,6 +67,7 @@ func (t *TranslationService) Translate(id string, templateData map[string]interf
 	})
 
 	if err != nil {
+		log.Error("Translate error", err)
 		return id
 	}
 
