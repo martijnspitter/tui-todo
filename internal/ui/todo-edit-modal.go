@@ -75,6 +75,7 @@ func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.
 		editState:    editingTitle,
 		appService:   appService,
 		tuiService:   tuiService,
+		translator:   translationService,
 	}
 }
 
