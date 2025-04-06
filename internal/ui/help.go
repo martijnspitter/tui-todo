@@ -52,20 +52,21 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 	// Create a new context-specific key map
 	contextKeyMap := keys.NewHelpKeyMap(m.translator)
 
-	// Always show these keys regardless of context
-
-	if filterState.Mode != service.Filtering {
+	// Always show these keys regardless of context when not filtering
+	if !filterState.IsFilterActive {
 		contextKeyMap.AddBindingInShort(baseKeyMap.Help)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Quit)
 	}
 
 	// Add view-specific bindings
 	switch currentView {
-	case service.ListView:
-		if filterState.Mode == service.Filtering {
+	case service.OpenPane:
+	case service.DoingPane:
+	case service.DonePane:
+	case service.AllPane:
+		if filterState.IsFilterActive {
 			contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
 		} else {
-
 			// List view shows navigation keys
 			contextKeyMap.AddBindingInShort(baseKeyMap.New)
 			contextKeyMap.AddBindingInShort(baseKeyMap.Filter)
@@ -88,18 +89,18 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 		}
 
 		// Only show archived toggle in All filter mode
-		if filterState.Mode == service.AllPane {
+		if currentView == service.AllPane {
 			contextKeyMap.AddBindingInShort(baseKeyMap.ToggleArchived)
 			contextKeyMap.AddBindingInFull(baseKeyMap.ToggleArchived)
 		}
 
-	case service.AddEditView:
+	case service.AddEditModal:
 		// Edit view shows edit-specific keys
 		contextKeyMap.AddBindingInFull(baseKeyMap.Next)
 		contextKeyMap.AddBindingInFull(baseKeyMap.Prev)
 		contextKeyMap.AddBindingInFull(baseKeyMap.Select)
 
-	case service.ConfirmDelete:
+	case service.ConfirmDeleteModal:
 		// Confirm delete shows minimal keys
 		contextKeyMap.AddBindingInFull(baseKeyMap.Select) // Confirm
 	}

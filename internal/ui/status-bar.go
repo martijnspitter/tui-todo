@@ -58,7 +58,7 @@ func (m *StatusBar) View() string {
 
 	// Create option for archived toggle
 	var archivedOption string
-	if m.tuiService.FilterState.Mode == service.AllPane {
+	if m.tuiService.CurrentView == service.AllPane {
 		if m.tuiService.FilterState.IncludeArchived {
 			archivedOption = filterOptionStyle.Render(m.translator.T("footer.show_archived"))
 		} else {
@@ -84,7 +84,7 @@ func (m *StatusBar) View() string {
 	for i := 1; i < len(filterOptions); i++ {
 		content = lipgloss.JoinHorizontal(lipgloss.Center, content, filterOptions[i])
 	}
-	remainingWidth := m.width - lipgloss.Width(content) - lipgloss.Width(archivedOption)
+	remainingWidth := m.width - lipgloss.Width(content) - lipgloss.Width(archivedOption) - 4
 	spacer := filterOptionStyle.Render(strings.Repeat(" ", remainingWidth))
 
 	content = lipgloss.JoinHorizontal(lipgloss.Center, content, spacer, archivedOption)

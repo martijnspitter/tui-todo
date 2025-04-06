@@ -390,23 +390,17 @@ func (s *AppService) AdvanceStatus(todoID int64) (models.Status, error) {
 	return newStatus, nil
 }
 
-func (s *AppService) GetFilteredTodos(mode FilterMode, status models.Status, tag string, showArchived bool) ([]*models.Todo, error) {
+func (s *AppService) GetFilteredTodos(currentView ViewType, showArchived bool) ([]*models.Todo, error) {
 	var todos []*models.Todo
 	var err error
 
-	switch mode {
-	case StatusPanes:
-		// Use existing helper methods but pass archived parameter
-		switch status {
-		case models.Open:
-			todos, err = s.GetOpenTodos()
-		case models.Doing:
-			todos, err = s.GetActiveTodos()
-		case models.Done:
-			todos, err = s.GetCompletedTodos()
-		default:
-			err = fmt.Errorf("error.unknown")
-		}
+	switch currentView {
+	case OpenPane:
+		todos, err = s.GetOpenTodos()
+	case DoingPane:
+		todos, err = s.GetActiveTodos()
+	case DonePane:
+		todos, err = s.GetCompletedTodos()
 	case AllPane:
 		todos, err = s.GetAllTodos(showArchived)
 	default:
