@@ -395,7 +395,7 @@ func (s *AppService) GetFilteredTodos(mode FilterMode, status models.Status, tag
 	var err error
 
 	switch mode {
-	case StatusFilter:
+	case StatusPanes:
 		// Use existing helper methods but pass archived parameter
 		switch status {
 		case models.Open:
@@ -407,14 +407,8 @@ func (s *AppService) GetFilteredTodos(mode FilterMode, status models.Status, tag
 		default:
 			err = fmt.Errorf("error.unknown")
 		}
-	case AllFilter:
+	case AllPane:
 		todos, err = s.GetAllTodos(showArchived)
-	case TagFilter:
-		if tag == "" {
-			err = fmt.Errorf("tag filter requires a tag")
-		} else {
-			todos, err = s.GetTodosByTag(tag)
-		}
 	default:
 		err = fmt.Errorf("error.unknown")
 	}

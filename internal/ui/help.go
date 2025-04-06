@@ -54,7 +54,7 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 
 	// Always show these keys regardless of context
 
-	if filterState.Mode != service.NameDescFilter {
+	if filterState.Mode != service.Filtering {
 		contextKeyMap.AddBindingInShort(baseKeyMap.Help)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Quit)
 	}
@@ -62,19 +62,13 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 	// Add view-specific bindings
 	switch currentView {
 	case service.ListView:
-		if filterState.Mode == service.NameDescFilter {
+		if filterState.Mode == service.Filtering {
 			contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
 		} else {
 
 			// List view shows navigation keys
-			contextKeyMap.AddBindingInShort(baseKeyMap.SwitchPane)
 			contextKeyMap.AddBindingInShort(baseKeyMap.New)
-			contextKeyMap.AddBindingInShort(baseKeyMap.Edit)
-
-			contextKeyMap.AddBindingInShort(baseKeyMap.Up)
-			contextKeyMap.AddBindingInShort(baseKeyMap.Down)
 			contextKeyMap.AddBindingInShort(baseKeyMap.Filter)
-			contextKeyMap.AddBindingInShort(baseKeyMap.Help)
 
 			contextKeyMap.AddBindingInFull(baseKeyMap.Up)
 			contextKeyMap.AddBindingInFull(baseKeyMap.Down)
@@ -94,7 +88,7 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 		}
 
 		// Only show archived toggle in All filter mode
-		if filterState.Mode == service.AllFilter {
+		if filterState.Mode == service.AllPane {
 			contextKeyMap.AddBindingInShort(baseKeyMap.ToggleArchived)
 			contextKeyMap.AddBindingInFull(baseKeyMap.ToggleArchived)
 		}
