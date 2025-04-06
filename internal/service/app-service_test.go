@@ -737,10 +737,6 @@ func TestFilteredQueryMethods(t *testing.T) {
 			methodName: "GetCompletedTodos",
 			methodFunc: func(svc *service.AppService) ([]*models.Todo, error) { return svc.GetCompletedTodos() },
 		},
-		{
-			methodName: "GetArchivedTodos",
-			methodFunc: func(svc *service.AppService) ([]*models.Todo, error) { return svc.GetArchivedTodos() },
-		},
 	}
 
 	mockTodos := []*models.Todo{
@@ -810,84 +806,6 @@ func TestFilteredQueryMethods(t *testing.T) {
 						}
 					}
 				})
-			}
-		})
-	}
-}
-
-// Test SearchTodos functionality
-func TestSearchTodos(t *testing.T) {
-	mockTodos := []*models.Todo{
-		createTestTodo(1),
-		createTestTodo(2),
-	}
-
-	testCases := []struct {
-		name      string
-		query     string
-		mockTodos []*models.Todo
-		mockError error
-		wantError bool
-		wantCount int
-	}{
-		{
-			name:      "Successful search",
-			query:     "test",
-			mockTodos: mockTodos,
-			mockError: nil,
-			wantError: false,
-			wantCount: 2,
-		},
-		{
-			name:      "No results",
-			query:     "nonexistent",
-			mockTodos: []*models.Todo{},
-			mockError: nil,
-			wantError: false,
-			wantCount: 0,
-		},
-		{
-			name:      "Search error",
-			query:     "error",
-			mockTodos: nil,
-			mockError: errors.New("search error"),
-			wantError: true,
-			wantCount: 0,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Setup mock
-			mockRepo := &MockTodoRepository{
-				MockTodos: tc.mockTodos,
-				MockError: tc.mockError,
-			}
-
-			// Create service
-			svc := service.NewAppService(mockRepo)
-
-			// Call method
-			todos, err := svc.SearchTodos(tc.query)
-
-			// Check expectations
-			if tc.wantError {
-				if err == nil {
-					t.Error("Expected error but got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("Expected no error but got: %v", err)
-				}
-
-				if len(todos) != tc.wantCount {
-					t.Errorf("Expected %d todos, got %d", tc.wantCount, len(todos))
-				}
-
-				// Verify the search query was passed to the repository
-				if mockRepo.SearchQuery != tc.query {
-					t.Errorf("Expected search query %q, got %q", tc.query, mockRepo.SearchQuery)
-				}
 			}
 		})
 	}
@@ -1013,79 +931,6 @@ func TestTagMethods(t *testing.T) {
 						if len(tags) != 1 || tags[0] != tc.tag {
 							t.Errorf("Expected tag %q to be removed", tc.tag)
 						}
-					}
-				}
-			})
-		}
-	})
-
-	// Test GetTodosByTag
-	t.Run("GetTodosByTag", func(t *testing.T) {
-		mockTodos := []*models.Todo{
-			createTestTodo(1),
-			createTestTodo(2),
-		}
-
-		testCases := []struct {
-			name      string
-			tag       string
-			mockTodos []*models.Todo
-			mockError error
-			wantError bool
-			wantCount int
-		}{
-			{
-				name:      "Successfully get todos by tag",
-				tag:       "important",
-				mockTodos: mockTodos,
-				mockError: nil,
-				wantError: false,
-				wantCount: 2,
-			},
-			{
-				name:      "No todos with tag",
-				tag:       "nonexistent",
-				mockTodos: []*models.Todo{},
-				mockError: nil,
-				wantError: false,
-				wantCount: 0,
-			},
-			{
-				name:      "Error getting todos by tag",
-				tag:       "error",
-				mockTodos: nil,
-				mockError: errors.New("tag error"),
-				wantError: true,
-				wantCount: 0,
-			},
-		}
-
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				// Setup mock
-				mockRepo := &MockTodoRepository{
-					MockTodos: tc.mockTodos,
-					MockError: tc.mockError,
-				}
-
-				// Create service
-				svc := service.NewAppService(mockRepo)
-
-				// Call method
-				todos, err := svc.GetTodosByTag(tc.tag)
-
-				// Check expectations
-				if tc.wantError {
-					if err == nil {
-						t.Error("Expected error but got nil")
-					}
-				} else {
-					if err != nil {
-						t.Errorf("Expected no error but got: %v", err)
-					}
-
-					if len(todos) != tc.wantCount {
-						t.Errorf("Expected %d todos, got %d", tc.wantCount, len(todos))
 					}
 				}
 			})
@@ -1341,5 +1186,311 @@ func TestSortTodos(t *testing.T) {
 				t.Errorf("At position %d, expected newer update time to come before older update time", i)
 			}
 		}
+	}
+}
+
+// Test archive methods
+func TestArchiveMethods(t *testing.T) {
+	// Test structure for both archive and unarchive operations
+	archiveTests := []struct {
+		methodName  string
+		methodFunc  func(*service.AppService, int64) error
+		setArchived bool // Expected archive status after operation
+	}{
+		{
+			methodName:  "ArchiveTodo",
+			methodFunc:  func(svc *service.AppService, id int64) error { return svc.ArchiveTodo(id) },
+			setArchived: true,
+		},
+		{
+			methodName:  "UnarchiveTodo",
+			methodFunc:  func(svc *service.AppService, id int64) error { return svc.UnarchiveTodo(id) },
+			setArchived: false,
+		},
+	}
+
+	for _, archiveTest := range archiveTests {
+		t.Run(archiveTest.methodName, func(t *testing.T) {
+			testCases := []struct {
+				name      string
+				todoID    int64
+				mockTodo  *models.Todo
+				mockError error
+				wantError bool
+			}{
+				{
+					name:      "Success operation",
+					todoID:    1,
+					mockTodo:  createTestTodo(1),
+					mockError: nil,
+					wantError: false,
+				},
+				{
+					name:      "Error fetching todo",
+					todoID:    2,
+					mockTodo:  nil,
+					mockError: errors.New("fetch error"),
+					wantError: true,
+				},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					// Setup mock
+					mockRepo := &MockTodoRepository{
+						MockTodo:  tc.mockTodo,
+						MockError: tc.mockError,
+					}
+
+					// Create service
+					svc := service.NewAppService(mockRepo)
+
+					// Get time before update
+					var beforeUpdate time.Time
+					if tc.mockTodo != nil {
+						beforeUpdate = tc.mockTodo.UpdatedAt
+					}
+
+					// Call the method being tested
+					err := archiveTest.methodFunc(svc, tc.todoID)
+
+					// Check expectations
+					if tc.wantError {
+						if err == nil {
+							t.Error("Expected error but got nil")
+						}
+					} else {
+						if err != nil {
+							t.Errorf("Expected no error but got: %v", err)
+						}
+
+						// Verify todo was updated
+						if len(mockRepo.UpdatedTodos) != 1 {
+							t.Errorf("Expected todo to be updated")
+						} else {
+							updatedTodo := mockRepo.UpdatedTodos[0]
+
+							// Check archived was changed
+							if updatedTodo.Archived != archiveTest.setArchived {
+								t.Errorf("Expected archived status %v, got %v",
+									archiveTest.setArchived, updatedTodo.Archived)
+							}
+
+							// Check updated_at timestamp was changed
+							if !updatedTodo.UpdatedAt.After(beforeUpdate) {
+								t.Errorf("Expected updated_at to be updated")
+							}
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
+// Test AdvanceStatus functionality
+func TestAdvanceStatus(t *testing.T) {
+	testCases := []struct {
+		name           string
+		todoID         int64
+		initialStatus  models.Status
+		expectedStatus models.Status
+		mockError      error
+		wantError      bool
+	}{
+		{
+			name:           "Advance from Open to Doing",
+			todoID:         1,
+			initialStatus:  models.Open,
+			expectedStatus: models.Doing,
+			mockError:      nil,
+			wantError:      false,
+		},
+		{
+			name:           "Advance from Doing to Done",
+			todoID:         2,
+			initialStatus:  models.Doing,
+			expectedStatus: models.Done,
+			mockError:      nil,
+			wantError:      false,
+		},
+		{
+			name:           "Advance from Done to Open (cycle)",
+			todoID:         3,
+			initialStatus:  models.Done,
+			expectedStatus: models.Open,
+			mockError:      nil,
+			wantError:      false,
+		},
+		{
+			name:           "Error fetching todo",
+			todoID:         4,
+			initialStatus:  models.Open,
+			expectedStatus: models.Doing,
+			mockError:      errors.New("fetch error"),
+			wantError:      true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create a todo with the initial status
+			todo := createTestTodo(tc.todoID)
+			todo.Status = tc.initialStatus
+
+			// Setup mock
+			mockRepo := &MockTodoRepository{
+				MockTodo:  todo,
+				MockError: tc.mockError,
+			}
+
+			// Create service
+			svc := service.NewAppService(mockRepo)
+
+			// Call method
+			newStatus, err := svc.AdvanceStatus(tc.todoID)
+
+			// Check expectations
+			if tc.wantError {
+				if err == nil {
+					t.Error("Expected error but got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error but got: %v", err)
+				}
+
+				if newStatus != tc.expectedStatus {
+					t.Errorf("Expected status %v, got %v", tc.expectedStatus, newStatus)
+				}
+
+				// Verify the todo was updated by checking the underlying method calls
+				// For Open->Doing, should have called MarkAsDoing
+				// For Doing->Done, should have called MarkAsDone
+				// For Done->Open, should have called MarkAsOpen
+				if len(mockRepo.UpdatedTodos) == 0 {
+					t.Error("Expected todo to be updated")
+				} else {
+					updatedTodo := mockRepo.UpdatedTodos[0]
+					if updatedTodo.Status != tc.expectedStatus {
+						t.Errorf("Expected todo status to be %v, got %v",
+							tc.expectedStatus, updatedTodo.Status)
+					}
+				}
+			}
+		})
+	}
+}
+
+// Test GetFilteredTodos functionality
+func TestGetFilteredTodos(t *testing.T) {
+	// First, define ViewType enum to match service implementation
+	testCases := []struct {
+		name         string
+		viewType     service.ViewType
+		showArchived bool
+		mockTodos    []*models.Todo
+		mockError    error
+		wantError    bool
+		expectedRepo string // Which repository method should be called
+	}{
+		{
+			name:         "Get Open Todos",
+			viewType:     service.OpenPane,
+			showArchived: false,
+			mockTodos:    []*models.Todo{createTestTodo(1), createTestTodo(2)},
+			mockError:    nil,
+			wantError:    false,
+			expectedRepo: "GetOpen",
+		},
+		{
+			name:         "Get Doing Todos",
+			viewType:     service.DoingPane,
+			showArchived: false,
+			mockTodos:    []*models.Todo{createTestTodo(3)},
+			mockError:    nil,
+			wantError:    false,
+			expectedRepo: "GetActive",
+		},
+		{
+			name:         "Get Done Todos",
+			viewType:     service.DonePane,
+			showArchived: false,
+			mockTodos:    []*models.Todo{createTestTodo(4), createTestTodo(5)},
+			mockError:    nil,
+			wantError:    false,
+			expectedRepo: "GetCompleted",
+		},
+		{
+			name:         "Get All Todos without archived",
+			viewType:     service.AllPane,
+			showArchived: false,
+			mockTodos:    []*models.Todo{createTestTodo(6), createTestTodo(7)},
+			mockError:    nil,
+			wantError:    false,
+			expectedRepo: "GetAll",
+		},
+		{
+			name:         "Get All Todos with archived",
+			viewType:     service.AllPane,
+			showArchived: true,
+			mockTodos:    []*models.Todo{createTestTodo(8)},
+			mockError:    nil,
+			wantError:    false,
+			expectedRepo: "GetAll",
+		},
+		{
+			name:         "Error in repository",
+			viewType:     service.OpenPane,
+			showArchived: false,
+			mockTodos:    nil,
+			mockError:    errors.New("repository error"),
+			wantError:    true,
+			expectedRepo: "GetOpen",
+		},
+		{
+			name:         "Invalid view type",
+			viewType:     service.ViewType(999), // Invalid value
+			showArchived: false,
+			mockTodos:    nil,
+			mockError:    nil,
+			wantError:    true,
+			expectedRepo: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Setup mock repository
+			mockRepo := &MockTodoRepository{
+				MockTodos: tc.mockTodos,
+				MockError: tc.mockError,
+			}
+
+			// Create service
+			svc := service.NewAppService(mockRepo)
+
+			// Call method
+			todos, err := svc.GetFilteredTodos(service.ViewType(tc.viewType), tc.showArchived)
+
+			// Check expectations
+			if tc.wantError {
+				if err == nil {
+					t.Error("Expected error but got nil")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Expected no error but got: %v", err)
+				}
+
+				// Verify we got the expected todos
+				if len(todos) != len(tc.mockTodos) {
+					t.Errorf("Expected %d todos, got %d", len(tc.mockTodos), len(todos))
+				}
+
+				// Additional verification could check that the correct repository method was called
+				// This would require enhancing the mock to track method calls
+			}
+		})
 	}
 }

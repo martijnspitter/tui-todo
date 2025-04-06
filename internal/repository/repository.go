@@ -18,14 +18,11 @@ type TodoRepository interface {
 	GetOpen() ([]*models.Todo, error)
 	GetActive() ([]*models.Todo, error)
 	GetCompleted() ([]*models.Todo, error)
-	GetArchived() ([]*models.Todo, error)
 	Search(query string) ([]*models.Todo, error)
 
 	// tags
 	AddTagToTodo(id int64, tagname string) error
 	RemoveTagFromTodo(id int64, tageName string) error
-	GetTodoTags(id int64) ([]string, error)
-	FindTodosByTag(tagName string) ([]*models.Todo, error)
 }
 
 // Filter returns a WHERE clause fragment and associated arguments

@@ -237,26 +237,6 @@ func (s *AppService) GetCompletedTodos() ([]*models.Todo, error) {
 	return sortTodos(todos), nil
 }
 
-func (s *AppService) GetArchivedTodos() ([]*models.Todo, error) {
-	todos, err := s.todoRepo.GetArchived()
-	if err != nil {
-		log.Error("Failed to fetch archived todos", "error", err)
-		return nil, fmt.Errorf("error.todos_not_found")
-	}
-
-	return sortTodos(todos), nil
-}
-
-func (s *AppService) SearchTodos(query string) ([]*models.Todo, error) {
-	todos, err := s.todoRepo.Search(query)
-	if err != nil {
-		log.Error("Failed to search todos", "error", err, "query", query)
-		return nil, fmt.Errorf("error.todos_not_found")
-	}
-
-	return sortTodos(todos), nil
-}
-
 // Tag methods
 func (s *AppService) AddTagToTodo(todoID int64, tag string) error {
 	err := s.todoRepo.AddTagToTodo(todoID, tag)
@@ -276,16 +256,6 @@ func (s *AppService) RemoveTagFromTodo(todoID int64, tag string) error {
 	}
 
 	return nil
-}
-
-func (s *AppService) GetTodosByTag(tag string) ([]*models.Todo, error) {
-	todos, err := s.todoRepo.FindTodosByTag(tag)
-	if err != nil {
-		log.Error("Failed to get todos by tag", "error", err, "tag", tag)
-		return nil, fmt.Errorf("error.todos_not_found")
-	}
-
-	return sortTodos(todos), nil
 }
 
 // Due date methods
