@@ -28,11 +28,11 @@ type TodosModel struct {
 	footer         tea.Model
 }
 
-func NewTodoModel(appService *service.AppService, translationService *i18n.TranslationService) *TodosModel {
+func NewTodosModel(appService *service.AppService, translationService *i18n.TranslationService) *TodosModel {
 	tuiService := service.NewTuiService()
 
 	// Setup list
-	todoList := list.New([]list.Item{}, TodoModel{translator: translationService}, 0, 0)
+	todoList := list.New([]list.Item{}, TodoModel{translator: translationService, tuiService: tuiService}, 0, 0)
 	todoList.Title = ""
 	todoList.DisableQuitKeybindings()
 	todoList.SetShowTitle(false)
