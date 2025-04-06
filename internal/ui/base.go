@@ -15,7 +15,7 @@ type BaseModel struct {
 }
 
 func NewBaseModel(service *service.AppService, translationService *i18n.TranslationService) *BaseModel {
-	todoModel := NewTodoModel(service, translationService)
+	todoModel := NewTodosModel(service, translationService)
 	toastOverlay := NewToastOverlay(todoModel)
 	return &BaseModel{
 		toastOverlay: toastOverlay,

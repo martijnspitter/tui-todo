@@ -41,6 +41,7 @@ func (i *TodoItem) FilterValue() string {
 
 type TodoModel struct {
 	translator *i18n.TranslationService
+	tuiService *service.TuiService
 }
 
 func (d TodoModel) Height() int                             { return 1 }
@@ -57,9 +58,20 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 	selected := styling.GetSelectedBlock(index == m.Index())
 	translatedPriority := d.translator.T(i.todo.Priority.String())
 	priorityMarker := styling.GetStyledPriority(translatedPriority, i.todo.Priority, true, false)
+	translatedStatus := d.translator.T(i.todo.Status.String())
+	statusMarker := styling.GetStyledStatus(translatedStatus, i.todo.Status, true, true)
+	if i.todo.Status != models.Doing {
+		statusMarker = statusMarker + " "
+	}
+	statusLength := 0
+
+	if d.tuiService.CurrentView == service.AllPane {
+		statusLength = lipgloss.Width(statusMarker)
+	}
+
 	title := styling.TextStyle.MarginRight(1).Width(20).Render(truncateString(i.Title(), 20))
 
-	leftElementsWidth := lipgloss.Width(selected) + lipgloss.Width(priorityMarker) + lipgloss.Width(title)
+	leftElementsWidth := lipgloss.Width(selected) + lipgloss.Width(priorityMarker) + lipgloss.Width(title) + statusLength
 	descMaxWidth := width - leftElementsWidth
 	descStr := ""
 	if descMaxWidth > 50 {
@@ -157,6 +169,10 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 
 	rightContent := lipgloss.JoinHorizontal(lipgloss.Right, rightElements...)
 	leftContent := lipgloss.JoinHorizontal(lipgloss.Left, selected, priorityMarker, title, descStr)
+
+	if d.tuiService.CurrentView == service.AllPane {
+		leftContent = lipgloss.JoinHorizontal(lipgloss.Left, selected, priorityMarker, statusMarker, title, descStr)
+	}
 
 	row := lipgloss.NewStyle().Width(width).Render(
 		lipgloss.JoinHorizontal(lipgloss.Left,
