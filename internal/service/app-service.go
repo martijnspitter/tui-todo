@@ -237,26 +237,6 @@ func (s *AppService) GetCompletedTodos() ([]*models.Todo, error) {
 	return sortTodos(todos), nil
 }
 
-func (s *AppService) GetArchivedTodos() ([]*models.Todo, error) {
-	todos, err := s.todoRepo.GetArchived()
-	if err != nil {
-		log.Error("Failed to fetch archived todos", "error", err)
-		return nil, fmt.Errorf("error.todos_not_found")
-	}
-
-	return sortTodos(todos), nil
-}
-
-func (s *AppService) SearchTodos(query string) ([]*models.Todo, error) {
-	todos, err := s.todoRepo.Search(query)
-	if err != nil {
-		log.Error("Failed to search todos", "error", err, "query", query)
-		return nil, fmt.Errorf("error.todos_not_found")
-	}
-
-	return sortTodos(todos), nil
-}
-
 // Tag methods
 func (s *AppService) AddTagToTodo(todoID int64, tag string) error {
 	err := s.todoRepo.AddTagToTodo(todoID, tag)
@@ -276,16 +256,6 @@ func (s *AppService) RemoveTagFromTodo(todoID int64, tag string) error {
 	}
 
 	return nil
-}
-
-func (s *AppService) GetTodosByTag(tag string) ([]*models.Todo, error) {
-	todos, err := s.todoRepo.FindTodosByTag(tag)
-	if err != nil {
-		log.Error("Failed to get todos by tag", "error", err, "tag", tag)
-		return nil, fmt.Errorf("error.todos_not_found")
-	}
-
-	return sortTodos(todos), nil
 }
 
 // Due date methods
@@ -390,31 +360,19 @@ func (s *AppService) AdvanceStatus(todoID int64) (models.Status, error) {
 	return newStatus, nil
 }
 
-func (s *AppService) GetFilteredTodos(mode FilterMode, status models.Status, tag string, showArchived bool) ([]*models.Todo, error) {
+func (s *AppService) GetFilteredTodos(currentView ViewType, showArchived bool) ([]*models.Todo, error) {
 	var todos []*models.Todo
 	var err error
 
-	switch mode {
-	case StatusFilter:
-		// Use existing helper methods but pass archived parameter
-		switch status {
-		case models.Open:
-			todos, err = s.GetOpenTodos()
-		case models.Doing:
-			todos, err = s.GetActiveTodos()
-		case models.Done:
-			todos, err = s.GetCompletedTodos()
-		default:
-			err = fmt.Errorf("error.unknown")
-		}
-	case AllFilter:
+	switch currentView {
+	case OpenPane:
+		todos, err = s.GetOpenTodos()
+	case DoingPane:
+		todos, err = s.GetActiveTodos()
+	case DonePane:
+		todos, err = s.GetCompletedTodos()
+	case AllPane:
 		todos, err = s.GetAllTodos(showArchived)
-	case TagFilter:
-		if tag == "" {
-			err = fmt.Errorf("tag filter requires a tag")
-		} else {
-			todos, err = s.GetTodosByTag(tag)
-		}
 	default:
 		err = fmt.Errorf("error.unknown")
 	}

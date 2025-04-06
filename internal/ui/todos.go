@@ -55,7 +55,7 @@ func NewTodoModel(appService *service.AppService, translationService *i18n.Trans
 	if err == nil && len(todos) > 0 {
 		items := make([]list.Item, len(todos))
 		for i, todo := range todos {
-			items[i] = TodoItem{todo: todo}
+			items[i] = &TodoItem{todo: todo, tuiService: tuiService}
 		}
 		m.list.SetItems(items)
 	} else if err != nil {
@@ -88,7 +88,7 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg,
 			m.tuiService.KeyMap.Quit,
 		):
-			if m.tuiService.CurrentView == service.AddEditView {
+			if m.tuiService.CurrentView == service.AddEditModal {
 				m.tuiService.SwitchToListView()
 			} else if m.list.FilterState() != 0 {
 				m.tuiService.RemoveNameFilter()
@@ -101,13 +101,27 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 
+		case key.Matches(msg, m.tuiService.KeyMap.TagFilter):
+			if !m.tuiService.FilterState.IsFilterActive {
+				m.tuiService.ActivateTagFilter()
+				m.list.ResetFilter()
+				filterKeyMsg := tea.KeyMsg{
+					Type:  tea.KeyRunes,
+					Runes: []rune{'/'},
+				}
+				m.list, cmd = m.list.Update(filterKeyMsg)
+				return m, cmd
+			}
+
 		case key.Matches(msg, m.tuiService.KeyMap.Filter):
-			m.tuiService.ActivateNameFilter()
-			m.list, cmd = m.list.Update(msg)
-			return m, cmd
+			if !m.tuiService.FilterState.IsFilterActive {
+				m.tuiService.ActivateTitleFilter()
+				m.list, cmd = m.list.Update(msg)
+				return m, cmd
+			}
 
 		case key.Matches(msg, m.tuiService.KeyMap.SwitchPane):
-			if m.tuiService.CurrentView == service.ListView {
+			if !m.tuiService.ShouldShowModal() {
 				switch key := msg.String(); key {
 				case "1", "2", "3", "4":
 					m.tuiService.SwitchPane(key)
@@ -118,14 +132,14 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.tuiService.KeyMap.AdvanceStatus):
 			// Advance todo status
 			if m.list.SelectedItem() != nil {
-				item := m.list.SelectedItem().(TodoItem)
+				item := m.list.SelectedItem().(*TodoItem)
 				return m, m.advanceTodoStatusCmd(item.todo.ID)
 			}
 
 		case key.Matches(msg, m.tuiService.KeyMap.Edit):
 			// Edit selected todo
 			if m.list.SelectedItem() != nil {
-				item := m.list.SelectedItem().(TodoItem)
+				item := m.list.SelectedItem().(*TodoItem)
 				return m, m.showEditModalCmd(item.todo)
 			}
 		case key.Matches(msg, m.tuiService.KeyMap.New):
@@ -136,16 +150,16 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, m.tuiService.KeyMap.Delete):
 			// Delete selected todo
 			if m.list.SelectedItem() != nil {
-				item := m.list.SelectedItem().(TodoItem)
+				item := m.list.SelectedItem().(*TodoItem)
 				return m, m.showConfirmDeleteCmd(item.todo.ID)
 			}
 		case key.Matches(msg, m.tuiService.KeyMap.Archive):
 			if m.list.SelectedItem() != nil {
-				item := m.list.SelectedItem().(TodoItem)
+				item := m.list.SelectedItem().(*TodoItem)
 				return m, m.toggleArchiveCmd(item.todo.ID, item.todo.Archived)
 			}
 		case key.Matches(msg, m.tuiService.KeyMap.ToggleArchived):
-			if m.tuiService.FilterState.Mode == service.AllFilter {
+			if m.tuiService.CurrentView == service.AllPane {
 				m.tuiService.FilterState.IncludeArchived = !m.tuiService.FilterState.IncludeArchived
 				key := fmt.Sprintf("toast.filter_archived_%s",
 					map[bool]string{true: "shown", false: "hidden"}[m.tuiService.FilterState.IncludeArchived])
@@ -179,7 +193,7 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case todosLoadedMsg:
 		items := make([]list.Item, len(msg.todos))
 		for i, todo := range msg.todos {
-			items[i] = TodoItem{todo: todo}
+			items[i] = &TodoItem{todo: todo, tuiService: m.tuiService}
 		}
 		cmd := m.list.SetItems(items)
 		cmds = append(cmds, cmd)
@@ -228,7 +242,7 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmds = append(cmds, cmd)
 
 	// Update text input
-	if m.tuiService.CurrentView == service.ListView {
+	if m.tuiService.CurrentView == service.OpenPane {
 		m.footer, cmd = m.footer.Update(msg)
 		cmds = append(cmds, cmd)
 	}
@@ -274,8 +288,9 @@ func (m *TodosModel) HeaderView() string {
 	var leftTabs []string
 
 	for status := models.Open; status <= models.Done; status++ {
-		isSelected := m.tuiService.FilterState.Mode == service.StatusFilter &&
-			m.tuiService.FilterState.Status == status
+		log.Debug("status", status)
+		log.Debug("selected ", int(m.tuiService.CurrentView), int(status))
+		isSelected := int(m.tuiService.CurrentView) == int(status)
 		translatedStatus := m.translator.T(status.String())
 		tab := styling.GetStyledStatus(translatedStatus, status, isSelected, false)
 		leftTabs = append(leftTabs, tab)
@@ -283,7 +298,7 @@ func (m *TodosModel) HeaderView() string {
 
 	leftContent := lipgloss.JoinHorizontal(lipgloss.Center, leftTabs...)
 
-	isAllSelected := m.tuiService.FilterState.Mode == service.AllFilter
+	isAllSelected := m.tuiService.CurrentView == service.AllPane
 	allTab := styling.GetStyledTagWithIndicator(4, m.translator.T("filter.all"), styling.Rosewater, isAllSelected, false)
 
 	const minGap = 2
@@ -349,9 +364,7 @@ type modalCloseMsg struct {
 func (m *TodosModel) loadTodosCmd() tea.Cmd {
 	return func() tea.Msg {
 		todos, err := m.service.GetFilteredTodos(
-			m.tuiService.FilterState.Mode,
-			m.tuiService.FilterState.Status,
-			m.tuiService.FilterState.Tag,
+			m.tuiService.CurrentView,
 			m.tuiService.FilterState.IncludeArchived,
 		)
 

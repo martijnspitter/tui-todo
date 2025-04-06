@@ -3,30 +3,39 @@ package ui
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
+
+	"slices"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
+	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
-	"slices"
 )
 
 type TodoItem struct {
-	todo *models.Todo
+	todo       *models.Todo
+	tuiService *service.TuiService
 }
 
-func (i TodoItem) Title() string {
+func (i *TodoItem) Title() string {
 	return i.todo.Title
 }
 
-func (i TodoItem) Description() string {
+func (i *TodoItem) Description() string {
 	return i.todo.Description
 }
 
-func (i TodoItem) FilterValue() string {
+func (i *TodoItem) FilterValue() string {
+	log.Debug("tui service", i.tuiService)
+	if i.tuiService.IsTagFilterActive() {
+		return strings.Join(i.todo.Tags, " ")
+	}
 	return i.todo.Title + " " + i.todo.Description
 }
 
@@ -38,7 +47,7 @@ func (d TodoModel) Height() int                             { return 1 }
 func (d TodoModel) Spacing() int                            { return 0 }
 func (d TodoModel) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
-	i, ok := listItem.(TodoItem)
+	i, ok := listItem.(*TodoItem)
 	if !ok {
 		return
 	}

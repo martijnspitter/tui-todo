@@ -2,15 +2,17 @@ package service
 
 import (
 	"github.com/martijnspitter/tui-todo/internal/keys"
-	"github.com/martijnspitter/tui-todo/internal/models"
 )
 
 type ViewType int
 
 const (
-	ListView ViewType = iota
-	AddEditView
-	ConfirmDelete
+	OpenPane ViewType = iota
+	DoingPane
+	DonePane
+	AllPane
+	AddEditModal
+	ConfirmDeleteModal
 )
 
 type TuiService struct {
@@ -21,29 +23,26 @@ type TuiService struct {
 }
 
 type FilterState struct {
-	Mode            FilterMode
-	Status          models.Status
-	Tag             string
+	IsFilterActive  bool
 	IncludeArchived bool
+	FilterMode      FilterInputMode
 }
 
-type FilterMode int
+type FilterInputMode int
 
 const (
-	StatusFilter FilterMode = iota
-	AllFilter
-	TagFilter
-	NameDescFilter
+	FilterByTitle FilterInputMode = iota
+	FilterByTag
 )
 
 func NewTuiService() *TuiService {
 	return &TuiService{
 		KeyMap:      keys.DefaultKeyMap(),
-		CurrentView: ListView,
+		CurrentView: OpenPane,
 		FilterState: FilterState{
-			Mode:            StatusFilter,
-			Status:          models.Doing,
 			IncludeArchived: false,
+			IsFilterActive:  false,
+			FilterMode:      FilterByTitle,
 		},
 	}
 }
@@ -51,54 +50,63 @@ func NewTuiService() *TuiService {
 func (t *TuiService) SwitchPane(key string) {
 	switch key {
 	case "1":
-		t.FilterState.Mode = StatusFilter
-		t.FilterState.Status = models.Open
+		t.CurrentView = OpenPane
 	case "2":
-		t.FilterState.Mode = StatusFilter
-		t.FilterState.Status = models.Doing
+		t.CurrentView = DoingPane
 	case "3":
-		t.FilterState.Mode = StatusFilter
-		t.FilterState.Status = models.Done
+		t.CurrentView = DonePane
 	case "4":
-		t.FilterState.Mode = AllFilter
+		t.CurrentView = AllPane
 	}
+}
+
+func (t *TuiService) ActivateTagFilter() {
+	t.FilterState.IsFilterActive = true
+	t.FilterState.FilterMode = FilterByTag
+}
+
+func (t *TuiService) ActivateTitleFilter() {
+	t.FilterState.IsFilterActive = true
+	t.FilterState.FilterMode = FilterByTitle
+}
+
+func (t *TuiService) IsTagFilterActive() bool {
+	return t.FilterState.IsFilterActive &&
+		t.FilterState.FilterMode == FilterByTag
+}
+
+func (t *TuiService) IsTitleFilterActive() bool {
+	return t.FilterState.IsFilterActive &&
+		t.FilterState.FilterMode == FilterByTitle
 }
 
 func (t *TuiService) ToggleShowConfirmQuit() {
 	t.ShowConfirmQuit = !t.ShowConfirmQuit
 }
 
-func (t *TuiService) ActivateNameFilter() {
-	t.FilterState.Mode = NameDescFilter
-}
-
 func (t *TuiService) RemoveNameFilter() {
-	t.FilterState.Mode = StatusFilter
+	t.FilterState.IsFilterActive = false
+	t.FilterState.FilterMode = FilterByTitle
 }
 
 func (t *TuiService) SwitchToListView() {
-	t.CurrentView = ListView
+	t.CurrentView = OpenPane
 }
 
 func (t *TuiService) SwitchToEditTodoView() {
-	t.CurrentView = AddEditView
+	t.CurrentView = AddEditModal
 }
 
 func (t *TuiService) SwitchToConfirmDeleteView() {
-	t.CurrentView = ConfirmDelete
+	t.CurrentView = ConfirmDeleteModal
 }
 
 func (t *TuiService) ShouldShowModal() bool {
-	return t.CurrentView == AddEditView || t.CurrentView == ConfirmDelete
-}
-
-func (t *TuiService) FilterByTag(tag string) {
-	t.FilterState.Mode = TagFilter
-	t.FilterState.Tag = tag
+	return t.CurrentView == AddEditModal || t.CurrentView == ConfirmDeleteModal
 }
 
 func (t *TuiService) ToggleArchivedInAllView() {
-	if t.FilterState.Mode == AllFilter {
+	if t.CurrentView == AllPane {
 		t.FilterState.IncludeArchived = !t.FilterState.IncludeArchived
 	}
 }
