@@ -53,7 +53,7 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 	contextKeyMap := keys.NewHelpKeyMap(m.translator)
 
 	// Always show these keys regardless of context when not filtering
-	if !filterState.IsFilterActive {
+	if !filterState.IsFilterActive && currentView != service.AddEditModal {
 		contextKeyMap.AddBindingInShort(baseKeyMap.Help)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Quit)
 	}
@@ -96,9 +96,11 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 
 	case service.AddEditModal:
 		// Edit view shows edit-specific keys
-		contextKeyMap.AddBindingInFull(baseKeyMap.Next)
-		contextKeyMap.AddBindingInFull(baseKeyMap.Prev)
-		contextKeyMap.AddBindingInFull(baseKeyMap.Select)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Next)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Prev)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Select)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Save)
 
 	case service.ConfirmDeleteModal:
 		// Confirm delete shows minimal keys

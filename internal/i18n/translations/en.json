@@ -69,6 +69,7 @@
   "help.home": "Go to start",
   "help.end": "Go to end",
   "help.tag_filter": "Filter by tag",
+  "help.save": "Save",
 
   "ui.updated": "Updated: {{.Time}}",
   "ui.due": "Due: {{.Time}}",

@@ -43,9 +43,12 @@ type TodoEditModal struct {
 	appService   *service.AppService
 	tuiService   *service.TuiService
 	translator   *i18n.TranslationService
+	help         tea.Model
 }
 
 func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.AppService, tuiService *service.TuiService, translationService *i18n.TranslationService) *TodoEditModal {
+	help := NewHelpModel(appService, tuiService, translationService)
+
 	ti := textinput.New()
 	ti.SetValue(todo.Title)
 	ti.Focus()
@@ -76,6 +79,7 @@ func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.
 		appService:   appService,
 		tuiService:   tuiService,
 		translator:   translationService,
+		help:         help,
 	}
 }
 
@@ -206,6 +210,8 @@ func (m *TodoEditModal) View() string {
 		header = m.translator.T("modal.new_todo")
 	}
 
+	help := m.help.View()
+
 	// Combine all content
 	content := fmt.Sprintf(
 		"%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
@@ -216,7 +222,7 @@ func (m *TodoEditModal) View() string {
 		tags,
 		dueDate,
 		fmt.Sprintf("%s\n%s", priorityField, prioritySection),
-		styling.SubtextStyle.Render(m.translator.T("help.modal.instructions")),
+		help,
 	)
 
 	// Center the modal
