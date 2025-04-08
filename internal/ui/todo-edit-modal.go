@@ -27,6 +27,9 @@ const (
 	editingPriorityLow
 	editingPriorityMedium
 	editingPriorityHigh
+	editingStatusOpen
+	editingStatusDoing
+	editingStatusDone
 )
 
 // TodoEditModal allows viewing and editing todo details
@@ -37,6 +40,7 @@ type TodoEditModal struct {
 	tagsInput    textinput.Model
 	dueDateInput textinput.Model
 	priority     models.Priority
+	status       models.Status
 	editState    editState
 	width        int
 	height       int
@@ -73,6 +77,7 @@ func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.
 		tagsInput:    tagsInput,
 		dueDateInput: dueDateInput,
 		priority:     todo.Priority,
+		status:       todo.Status,
 		width:        width,
 		height:       height,
 		editState:    editingTitle,
@@ -108,12 +113,19 @@ func (m *TodoEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.goBack()
 
 		case key.Matches(msg, m.tuiService.KeyMap.Select):
-			if m.editState == editingPriorityLow {
+			switch m.editState {
+			case editingPriorityLow:
 				m.priority = models.Low
-			} else if m.editState == editingPriorityMedium {
+			case editingPriorityMedium:
 				m.priority = models.Medium
-			} else if m.editState == editingPriorityHigh {
+			case editingPriorityHigh:
 				m.priority = models.High
+			case editingStatusOpen:
+				m.status = models.Open
+			case editingStatusDoing:
+				m.status = models.Doing
+			case editingStatusDone:
+				m.status = models.Done
 			}
 
 		case key.Matches(msg, m.tuiService.KeyMap.AdvanceStatus):
@@ -153,9 +165,6 @@ func (m *TodoEditModal) View() string {
 		Width(m.width / 2).
 		BorderForeground(styling.Mauve)
 
-	translatedStatus := m.translator.T(m.todo.Status.String())
-	status := styling.GetStyledStatus(translatedStatus, m.todo.Status, true, true)
-
 	// Priority display
 	var priorityTabs []string
 	for p := models.Priority(0); p < 3; p++ {
@@ -169,6 +178,17 @@ func (m *TodoEditModal) View() string {
 	}
 
 	prioritySection := lipgloss.JoinHorizontal(lipgloss.Center, priorityTabs...)
+
+	var statusTabs []string
+	for status := models.Open; status <= models.Done; status++ {
+		selected := status == m.status
+		hovered := m.editState == editState(int(status)+7)
+		translatedStatus := m.translator.T(status.String())
+		tab := styling.GetStyledStatus(translatedStatus, status, selected, true, hovered)
+		statusTabs = append(statusTabs, tab)
+	}
+
+	statusSection := lipgloss.JoinHorizontal(lipgloss.Center, statusTabs...)
 
 	// Title field
 	titleField := m.translator.T("field.title")
@@ -192,10 +212,16 @@ func (m *TodoEditModal) View() string {
 	}
 	tags := fmt.Sprintf("%s\n%s", tagsField, m.tagsInput.View())
 
-	// Priority field
-	priorityField := m.translator.T("field.priority")
+	// Priority header
+	priorityHeader := m.translator.T("field.priority")
 	if m.editState == editingPriorityLow || m.editState == editingPriorityMedium || m.editState == editingPriorityHigh {
-		priorityField = styling.FocusedStyle.Render(priorityField)
+		priorityHeader = styling.FocusedStyle.Render(priorityHeader)
+	}
+
+	// Status header
+	statusHeader := m.translator.T("field.status")
+	if m.editState == editingStatusOpen || m.editState == editingStatusDoing || m.editState == editingStatusDone {
+		statusHeader = styling.FocusedStyle.Render(statusHeader)
 	}
 
 	// Due Date field
@@ -216,12 +242,12 @@ func (m *TodoEditModal) View() string {
 	content := fmt.Sprintf(
 		"%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
 		styling.TextStyle.Render(header),
-		status,
 		title,
 		description,
 		tags,
 		dueDate,
-		fmt.Sprintf("%s\n%s", priorityField, prioritySection),
+		fmt.Sprintf("%s\n%s", priorityHeader, prioritySection),
+		fmt.Sprintf("%s\n%s", statusHeader, statusSection),
 		help,
 	)
 
@@ -259,6 +285,12 @@ func (m *TodoEditModal) goForward() {
 	case editingPriorityMedium:
 		m.editState = editingPriorityHigh
 	case editingPriorityHigh:
+		m.editState = editingStatusOpen
+	case editingStatusOpen:
+		m.editState = editingStatusDoing
+	case editingStatusDoing:
+		m.editState = editingStatusDone
+	case editingStatusDone:
 		m.titleInput.Focus()
 		m.editState = editingTitle
 	}
@@ -268,7 +300,7 @@ func (m *TodoEditModal) goBack() {
 	switch m.editState {
 	case editingTitle:
 		m.titleInput.Blur()
-		m.editState = editingPriorityHigh
+		m.editState = editingStatusDone
 	case editingDescription:
 		m.descInput.Blur()
 		m.titleInput.Focus()
@@ -288,6 +320,13 @@ func (m *TodoEditModal) goBack() {
 		m.editState = editingPriorityLow
 	case editingPriorityHigh:
 		m.editState = editingPriorityMedium
+	case editingStatusOpen:
+		m.editState = editingPriorityHigh
+	case editingStatusDoing:
+		m.editState = editingStatusOpen
+	case editingStatusDone:
+		m.editState = editingStatusDoing
+
 	}
 }
 
@@ -297,6 +336,7 @@ func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 		m.todo.Title = m.titleInput.Value()
 		m.todo.Description = m.descInput.Value()
 		m.todo.Priority = m.priority
+		m.todo.Status = m.status
 
 		dueDateStr := strings.TrimSpace(m.dueDateInput.Value())
 		if dueDateStr == "" {

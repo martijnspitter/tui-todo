@@ -32,7 +32,6 @@ func (i *TodoItem) Description() string {
 }
 
 func (i *TodoItem) FilterValue() string {
-	log.Debug("tui service", i.tuiService)
 	if i.tuiService.IsTagFilterActive() {
 		return strings.Join(i.todo.Tags, " ")
 	}
@@ -59,7 +58,7 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 	translatedPriority := d.translator.T(i.todo.Priority.String())
 	priorityMarker := styling.GetStyledPriority(translatedPriority, i.todo.Priority, true, false)
 	translatedStatus := d.translator.T(i.todo.Status.String())
-	statusMarker := styling.GetStyledStatus(translatedStatus, i.todo.Status, true, true)
+	statusMarker := styling.GetStyledStatus(translatedStatus, i.todo.Status, true, true, false)
 	if i.todo.Status != models.Doing {
 		statusMarker = statusMarker + " "
 	}
