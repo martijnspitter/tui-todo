@@ -46,7 +46,7 @@ var (
 	Padding     = 1
 )
 
-func GetStyledStatus(translatedStatus string, status models.Status, selected, omitNumber bool) string {
+func GetStyledStatus(translatedStatus string, status models.Status, selected, omitNumber, hovered bool) string {
 	statusColors := map[models.Status]lipgloss.Color{
 		models.Open:  OpenStatusColor,
 		models.Doing: DoingStatusColor,
@@ -55,10 +55,10 @@ func GetStyledStatus(translatedStatus string, status models.Status, selected, om
 
 	statusColor := statusColors[status]
 
-	return GetStyledTagWithIndicator(int(status)+1, translatedStatus, statusColor, selected, omitNumber)
+	return GetStyledTagWithIndicator(int(status)+1, translatedStatus, statusColor, selected, omitNumber, hovered)
 }
 
-func GetStyledTagWithIndicator(num int, text string, color lipgloss.Color, selected, omitNumber bool) string {
+func GetStyledTagWithIndicator(num int, text string, color lipgloss.Color, selected, omitNumber, hovered bool) string {
 	// Create indicator with number
 	indicator := lipgloss.NewStyle().
 		Foreground(BlackColor).
@@ -71,8 +71,19 @@ func GetStyledTagWithIndicator(num int, text string, color lipgloss.Color, selec
 	var textStyle lipgloss.Style
 	var leftCapStyle lipgloss.Style
 	var rightCapStyle lipgloss.Style
-	if selected {
-		// Active tab
+	if hovered {
+		textStyle = lipgloss.NewStyle().
+			Foreground(BlackColor).
+			Background(Yellow).
+			Padding(0, 0)
+		leftCapStyle = lipgloss.NewStyle().
+			Foreground(Yellow).
+			Padding(0, 0)
+		rightCapStyle = lipgloss.NewStyle().
+			Foreground(Yellow).
+			Padding(0, 0).
+			MarginRight(2)
+	} else if selected {
 		textStyle = lipgloss.NewStyle().
 			Foreground(BlackColor).
 			Background(color).
@@ -84,6 +95,7 @@ func GetStyledTagWithIndicator(num int, text string, color lipgloss.Color, selec
 			Foreground(color).
 			Padding(0, 0).
 			MarginRight(2)
+
 	} else {
 		// Inactive tab
 		textStyle = lipgloss.NewStyle().

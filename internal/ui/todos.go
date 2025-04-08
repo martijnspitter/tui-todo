@@ -52,6 +52,7 @@ func NewTodosModel(appService *service.AppService, translationService *i18n.Tran
 	}
 
 	todos, err := appService.GetActiveTodos()
+
 	if err == nil && len(todos) > 0 {
 		items := make([]list.Item, len(todos))
 		for i, todo := range todos {
@@ -288,18 +289,16 @@ func (m *TodosModel) HeaderView() string {
 	var leftTabs []string
 
 	for status := models.Open; status <= models.Done; status++ {
-		log.Debug("status", status)
-		log.Debug("selected ", int(m.tuiService.CurrentView), int(status))
 		isSelected := int(m.tuiService.CurrentView) == int(status)
 		translatedStatus := m.translator.T(status.String())
-		tab := styling.GetStyledStatus(translatedStatus, status, isSelected, false)
+		tab := styling.GetStyledStatus(translatedStatus, status, isSelected, false, false)
 		leftTabs = append(leftTabs, tab)
 	}
 
 	leftContent := lipgloss.JoinHorizontal(lipgloss.Center, leftTabs...)
 
 	isAllSelected := m.tuiService.CurrentView == service.AllPane
-	allTab := styling.GetStyledTagWithIndicator(4, m.translator.T("filter.all"), styling.Rosewater, isAllSelected, false)
+	allTab := styling.GetStyledTagWithIndicator(4, m.translator.T("filter.all"), styling.Rosewater, isAllSelected, false, false)
 
 	const minGap = 2
 	availableWidth := m.width - 2 // -2 for padding

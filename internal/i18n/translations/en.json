@@ -49,6 +49,7 @@
   "field.tags": "Tags (comma separated)",
   "field.due_date": "Due Date (YYYY-MM-DD HH:MM or empty to clear)",
   "field.priority": "Priority",
+  "field.status": "Status",
 
   "help.ctrl_n": "New",
   "help.ctrl_e": "Edit",

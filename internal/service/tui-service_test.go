@@ -11,8 +11,8 @@ func TestNewTuiService(t *testing.T) {
 	svc := service.NewTuiService()
 
 	// Check default state
-	if svc.CurrentView != service.OpenPane {
-		t.Errorf("Expected default view to be OpenPane, got %v", svc.CurrentView)
+	if svc.CurrentView != service.DoingPane {
+		t.Errorf("Expected default view to be DoingPane, got %v", svc.CurrentView)
 	}
 
 	if svc.FilterState.IsFilterActive {

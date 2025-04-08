@@ -38,7 +38,7 @@ const (
 func NewTuiService() *TuiService {
 	return &TuiService{
 		KeyMap:      keys.DefaultKeyMap(),
-		CurrentView: OpenPane,
+		CurrentView: DoingPane,
 		FilterState: FilterState{
 			IncludeArchived: false,
 			IsFilterActive:  false,
