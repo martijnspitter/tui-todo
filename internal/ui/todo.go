@@ -11,7 +11,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
