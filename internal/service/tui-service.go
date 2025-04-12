@@ -110,3 +110,11 @@ func (t *TuiService) ToggleArchivedInAllView() {
 		t.FilterState.IncludeArchived = !t.FilterState.IncludeArchived
 	}
 }
+
+func (t *TuiService) DetermineMaxWidthsForTodo(screenWidth, selectedWidth, priorityWidth, statusWidth int) (titleWidth, desciptionWidth, leftWidth, remainderWidth int) {
+	titleW := max(screenWidth/5, 20)
+	descriptionW := max(screenWidth/3, 50)
+	leftW := selectedWidth - priorityWidth - statusWidth
+	remainderW := screenWidth - leftW
+	return titleW, descriptionW, leftW, remainderW
+}

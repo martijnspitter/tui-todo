@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
@@ -67,29 +68,27 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 		statusLength = lipgloss.Width(statusMarker)
 	}
 
-	title := styling.TextStyle.MarginRight(1).Width(20).Render(truncateString(i.Title(), 20))
+	titleWidth, desciptionWidth, leftWidth, remainderWidth := d.tuiService.DetermineMaxWidthsForTodo(width, lipgloss.Width(selected), lipgloss.Width(priorityMarker), statusLength)
 
-	leftElementsWidth := lipgloss.Width(selected) + lipgloss.Width(priorityMarker) + lipgloss.Width(title) + statusLength
-	descMaxWidth := width - leftElementsWidth
+	title := styling.TextStyle.MarginRight(1).Width(titleWidth).Render(truncateString(i.Title(), titleWidth))
+	log.Debug("titleWidth", titleWidth)
+
 	descStr := ""
-	if descMaxWidth > 50 {
+	if desciptionWidth > 50 {
 		descStr = styling.SubtextStyle.Width(50).Render(truncateString(i.Description(), 50))
 	} else {
 		descStr = ""
 	}
 
-	if leftElementsWidth >= width {
+	if leftWidth >= width {
 		widthAvailableForTitle := width - lipgloss.Width(selected) - 1
 		shortTitle := styling.TextStyle.MarginRight(1).Width(widthAvailableForTitle).Render(truncateString(i.Title(), widthAvailableForTitle))
 		row := lipgloss.JoinHorizontal(lipgloss.Center, selected, shortTitle)
 		fmt.Fprint(w, row)
 		return
 	}
-	leftElementsWithDescWidth := leftElementsWidth + lipgloss.Width(descStr)
 
 	var rightElements []string
-
-	rightAvailableWidth := width - leftElementsWithDescWidth - 2
 
 	type elementInfo struct {
 		element  string
@@ -138,7 +137,7 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 		}
 
 		// If everything fits, we're done
-		if totalWidth <= rightAvailableWidth || len(elementsToCheck) == 0 {
+		if totalWidth <= remainderWidth || len(elementsToCheck) == 0 {
 			break
 		}
 
