@@ -238,15 +238,11 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.WindowSize()
 	}
 
-	// Update list
 	m.list, cmd = m.list.Update(msg)
 	cmds = append(cmds, cmd)
 
-	// Update text input
-	if m.tuiService.CurrentView == service.OpenPane {
-		m.footer, cmd = m.footer.Update(msg)
-		cmds = append(cmds, cmd)
-	}
+	m.footer, cmd = m.footer.Update(msg)
+	cmds = append(cmds, cmd)
 
 	if m.tuiService.ShouldShowModal() && m.modalComponent != nil {
 		m.modalComponent, cmd = m.modalComponent.Update(msg)

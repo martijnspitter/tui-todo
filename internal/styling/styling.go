@@ -18,9 +18,11 @@ var (
 	DoneStatusColor     = lipgloss.Color("#a6e3a1")
 	ArchivedStatusColor = lipgloss.Color("#9399b2")
 
-	LowPriorityColor    = lipgloss.Color("#94e2d5")
-	MediumPriorityColor = lipgloss.Color("#fab387")
-	HighPriorityColor   = lipgloss.Color("#f38ba8")
+	LowPriorityColor      = lipgloss.Color("#94e2d5")
+	MediumPriorityColor   = lipgloss.Color("#f0c6c6")
+	HighPriorityColor     = lipgloss.Color("#ef9f76")
+	MajorPriorityColor    = lipgloss.Color("#e78284")
+	CriticalPriorityColor = lipgloss.Color("#d20f39")
 
 	WhiteColor = lipgloss.Color("#fff")
 	BlackColor = lipgloss.Color("#11111b")
@@ -132,6 +134,8 @@ func GetStyledPriority(translatedP string, p models.Priority, selected, hovered 
 		LowPriorityColor,
 		MediumPriorityColor,
 		HighPriorityColor,
+		MajorPriorityColor,
+		CriticalPriorityColor,
 	}
 	bgColor := BackgroundColor
 	textColor := SubtextColor
