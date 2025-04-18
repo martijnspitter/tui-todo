@@ -13,22 +13,6 @@ jobs:
   build-and-release:
     if: github.actor == 'martijnspitter'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-            output: todo
-          - goos: darwin
-            goarch: amd64
-            output: todo
-          - goos: darwin
-            goarch: arm64
-            output: todo
-          - goos: windows
-            goarch: amd64
-            output: todo.exe
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
