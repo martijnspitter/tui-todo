@@ -347,3 +347,64 @@ func TestToggleArchivedInAllView(t *testing.T) {
 		})
 	}
 }
+
+func TestSwitchToListView(t *testing.T) {
+	testCases := []struct {
+		name         string
+		initialView  service.ViewType
+		prevView     service.ViewType
+		expectedView service.ViewType
+	}{
+		{
+			name:         "Return to DoingPane when it was previous tab",
+			initialView:  service.AddEditModal,
+			prevView:     service.DoingPane,
+			expectedView: service.DoingPane,
+		},
+		{
+			name:         "Return to OpenPane when it was previous tab",
+			initialView:  service.ConfirmDeleteModal,
+			prevView:     service.OpenPane,
+			expectedView: service.OpenPane,
+		},
+		{
+			name:         "Return to DonePane when it was previous tab",
+			initialView:  service.AddEditModal,
+			prevView:     service.DonePane,
+			expectedView: service.DonePane,
+		},
+		{
+			name:         "Return to AllPane when it was previous tab",
+			initialView:  service.ConfirmDeleteModal,
+			prevView:     service.AllPane,
+			expectedView: service.AllPane,
+		},
+		{
+			name:         "Default to OpenPane when previous view was not a tab",
+			initialView:  service.AddEditModal,
+			prevView:     service.ConfirmDeleteModal, // Non-tab previous view
+			expectedView: service.OpenPane,
+		},
+		{
+			name:         "Default to OpenPane when previous view is invalid",
+			initialView:  service.AddEditModal,
+			prevView:     99, // Invalid view type
+			expectedView: service.OpenPane,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := service.NewTuiService()
+			svc.CurrentView = tc.initialView
+			svc.PrevView = tc.prevView
+
+			svc.SwitchToListView()
+
+			if svc.CurrentView != tc.expectedView {
+				t.Errorf("Expected CurrentView to be %v after SwitchToListView(), got %v",
+					tc.expectedView, svc.CurrentView)
+			}
+		})
+	}
+}

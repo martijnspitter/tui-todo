@@ -18,6 +18,7 @@ const (
 type TuiService struct {
 	KeyMap          keys.KeyMap
 	CurrentView     ViewType
+	PrevView        ViewType
 	FilterState     FilterState
 	ShowConfirmQuit bool
 }
@@ -90,14 +91,20 @@ func (t *TuiService) RemoveNameFilter() {
 }
 
 func (t *TuiService) SwitchToListView() {
-	t.CurrentView = OpenPane
+	if t.isPrevViewATab() {
+		t.CurrentView = t.PrevView
+	} else {
+		t.CurrentView = OpenPane
+	}
 }
 
 func (t *TuiService) SwitchToEditTodoView() {
+	t.PrevView = t.CurrentView
 	t.CurrentView = AddEditModal
 }
 
 func (t *TuiService) SwitchToConfirmDeleteView() {
+	t.PrevView = t.CurrentView
 	t.CurrentView = ConfirmDeleteModal
 }
 
@@ -109,4 +116,8 @@ func (t *TuiService) ToggleArchivedInAllView() {
 	if t.CurrentView == AllPane {
 		t.FilterState.IncludeArchived = !t.FilterState.IncludeArchived
 	}
+}
+
+func (t *TuiService) isPrevViewATab() bool {
+	return t.PrevView == OpenPane || t.PrevView == DoingPane || t.PrevView == DonePane || t.PrevView == AllPane
 }
