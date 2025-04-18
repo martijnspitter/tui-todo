@@ -11,7 +11,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
@@ -28,7 +27,11 @@ func (i *TodoItem) Title() string {
 }
 
 func (i *TodoItem) Description() string {
-	return i.todo.Description
+	// Replace newline characters with enter symbol
+	cleanDesc := strings.ReplaceAll(i.todo.Description, "\n", " ↵ ")
+	// Also handle Windows-style newlines
+	cleanDesc = strings.ReplaceAll(cleanDesc, "\r", "")
+	return cleanDesc
 }
 
 func (i *TodoItem) FilterValue() string {
@@ -62,20 +65,29 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 	if i.todo.Status != models.Doing {
 		statusMarker = statusMarker + " "
 	}
+	// Add due date if present
+	dueDate := ""
+	if i.todo.DueDate != nil {
+		translatedDueDate := d.translator.Tf("ui.due", map[string]interface{}{"Time": i.todo.DueDate.Format(time.Stamp)})
+		dueDate = styling.GetStyledDueDate(translatedDueDate, i.todo.Priority)
+
+	}
+
 	statusLength := 0
 
 	if d.tuiService.CurrentView == service.AllPane {
 		statusLength = lipgloss.Width(statusMarker)
 	}
 
-	titleWidth, desciptionWidth, leftWidth, remainderWidth := d.tuiService.DetermineMaxWidthsForTodo(width, lipgloss.Width(selected), lipgloss.Width(priorityMarker), statusLength)
+	requiredItemsWidth := statusLength + lipgloss.Width(selected) + lipgloss.Width(priorityMarker)
+
+	titleWidth, desciptionWidth, leftWidth, remainderWidth := d.tuiService.DetermineMaxWidthsForTodo(width, requiredItemsWidth, lipgloss.Width(dueDate))
 
 	title := styling.TextStyle.MarginRight(1).Width(titleWidth).Render(truncateString(i.Title(), titleWidth))
-	log.Debug("titleWidth", titleWidth)
 
 	descStr := ""
 	if desciptionWidth > 50 {
-		descStr = styling.SubtextStyle.Width(50).Render(truncateString(i.Description(), 50))
+		descStr = styling.SubtextStyle.Width(desciptionWidth).Render(truncateString(i.Description(), desciptionWidth))
 	} else {
 		descStr = ""
 	}
@@ -97,18 +109,6 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 	}
 	var elementsToCheck []elementInfo
 
-	// Add due date if present
-	dueDate := ""
-	if i.todo.DueDate != nil {
-		translatedDueDate := d.translator.Tf("ui.due", map[string]interface{}{"Time": i.todo.DueDate.Format(time.Stamp)})
-		dueDate = styling.GetStyledDueDate(translatedDueDate, i.todo.Priority)
-		elementsToCheck = append(elementsToCheck, struct {
-			element  string
-			index    int
-			priority int
-		}{dueDate, 1, 3})
-	}
-
 	tags := ""
 	for _, tag := range i.todo.Tags {
 		tags += styling.GetStyledTag(tag)
@@ -120,6 +120,12 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 			priority int
 		}{tags, 2, 1})
 	}
+
+	elementsToCheck = append(elementsToCheck, struct {
+		element  string
+		index    int
+		priority int
+	}{dueDate, 1, 3})
 
 	translatedUpdatedAt := d.translator.Tf("ui.updated", map[string]interface{}{"Time": i.todo.UpdatedAt.Format(time.Stamp)})
 	updatedAt := styling.GetStyledUpdatedAt(translatedUpdatedAt)
