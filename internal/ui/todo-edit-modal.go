@@ -27,6 +27,8 @@ const (
 	editingPriorityLow
 	editingPriorityMedium
 	editingPriorityHigh
+	editingPriorityMajor
+	editingPriorityCritical
 	editingStatusOpen
 	editingStatusDoing
 	editingStatusDone
@@ -120,6 +122,10 @@ func (m *TodoEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.priority = models.Medium
 			case editingPriorityHigh:
 				m.priority = models.High
+			case editingPriorityMajor:
+				m.priority = models.Major
+			case editingPriorityCritical:
+				m.priority = models.Critical
 			case editingStatusOpen:
 				m.status = models.Open
 			case editingStatusDoing:
@@ -167,7 +173,7 @@ func (m *TodoEditModal) View() string {
 
 	// Priority display
 	var priorityTabs []string
-	for p := models.Priority(0); p < 3; p++ {
+	for p := models.Priority(0); p <= models.Critical; p++ {
 		selected := p == m.priority
 		hovered := m.editState == editState(int(p)+4)
 
@@ -182,7 +188,7 @@ func (m *TodoEditModal) View() string {
 	var statusTabs []string
 	for status := models.Open; status <= models.Done; status++ {
 		selected := status == m.status
-		hovered := m.editState == editState(int(status)+7)
+		hovered := m.editState == editState(int(status)+9)
 		translatedStatus := m.translator.T(status.String())
 		tab := styling.GetStyledStatus(translatedStatus, status, selected, true, hovered)
 		statusTabs = append(statusTabs, tab)
@@ -268,31 +274,21 @@ func (m *TodoEditModal) goForward() {
 	case editingTitle:
 		m.titleInput.Blur()
 		m.descInput.Focus()
-		m.editState = editingDescription
 	case editingDescription:
 		m.descInput.Blur()
 		m.tagsInput.Focus()
-		m.editState = editingTags
 	case editingTags:
 		m.tagsInput.Blur()
 		m.dueDateInput.Focus()
-		m.editState = editingDueDate
 	case editingDueDate:
 		m.dueDateInput.Blur()
-		m.editState = editingPriorityLow
-	case editingPriorityLow:
-		m.editState = editingPriorityMedium
-	case editingPriorityMedium:
-		m.editState = editingPriorityHigh
-	case editingPriorityHigh:
-		m.editState = editingStatusOpen
-	case editingStatusOpen:
-		m.editState = editingStatusDoing
-	case editingStatusDoing:
-		m.editState = editingStatusDone
 	case editingStatusDone:
 		m.titleInput.Focus()
-		m.editState = editingTitle
+	}
+	if m.editState == editingStatusDone {
+		m.editState = 0
+	} else {
+		m.editState = m.editState + 1
 	}
 }
 
@@ -300,33 +296,23 @@ func (m *TodoEditModal) goBack() {
 	switch m.editState {
 	case editingTitle:
 		m.titleInput.Blur()
-		m.editState = editingStatusDone
 	case editingDescription:
 		m.descInput.Blur()
 		m.titleInput.Focus()
-		m.editState = editingTitle
 	case editingTags:
 		m.descInput.Focus()
 		m.tagsInput.Blur()
-		m.editState = editingDescription
 	case editingDueDate:
 		m.tagsInput.Focus()
 		m.dueDateInput.Blur()
-		m.editState = editingTags
 	case editingPriorityLow:
 		m.dueDateInput.Focus()
-		m.editState = editingDueDate
-	case editingPriorityMedium:
-		m.editState = editingPriorityLow
-	case editingPriorityHigh:
-		m.editState = editingPriorityMedium
-	case editingStatusOpen:
-		m.editState = editingPriorityHigh
-	case editingStatusDoing:
-		m.editState = editingStatusOpen
-	case editingStatusDone:
-		m.editState = editingStatusDoing
+	}
 
+	if m.editState == editingTitle {
+		m.editState = editingStatusDone
+	} else {
+		m.editState = m.editState - 1
 	}
 }
 

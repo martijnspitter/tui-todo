@@ -60,10 +60,7 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 
 	// Add view-specific bindings
 	switch currentView {
-	case service.OpenPane:
-	case service.DoingPane:
-	case service.DonePane:
-	case service.AllPane:
+	case service.OpenPane, service.DoingPane, service.DonePane, service.AllPane:
 		if filterState.IsFilterActive {
 			contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
 		} else {

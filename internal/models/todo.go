@@ -33,6 +33,10 @@ func (p Priority) String() string {
 		return "priority.medium"
 	case High:
 		return "priority.high"
+	case Major:
+		return "priority.major"
+	case Critical:
+		return "priority.critical"
 	default:
 		return "priority.unknown"
 	}
@@ -42,6 +46,8 @@ const (
 	Low Priority = iota
 	Medium
 	High
+	Major
+	Critical
 )
 
 type Todo struct {
