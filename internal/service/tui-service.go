@@ -121,3 +121,22 @@ func (t *TuiService) ToggleArchivedInAllView() {
 func (t *TuiService) isPrevViewATab() bool {
 	return t.PrevView == OpenPane || t.PrevView == DoingPane || t.PrevView == DonePane || t.PrevView == AllPane
 }
+
+var (
+	minWidthTitle      = 50.0
+	maxWidthTitleRatio = 0.2
+
+	minWidthDesc      = 50.0
+	maxWidthDescRatio = 0.4
+)
+
+func (t *TuiService) DetermineMaxWidthsForTodo(screenWidth, requiredItemsWidth, dueDateWidth int) (titleWidth, desciptionWidth, leftWidth, remainderWidth int) {
+	availableW := float64(screenWidth - requiredItemsWidth)
+
+	titleW := max(availableW*maxWidthTitleRatio, minWidthTitle)
+	descriptionW := max(availableW*maxWidthDescRatio, minWidthDesc)
+	leftW := titleW + descriptionW
+	remainderW := availableW - leftW - float64(dueDateWidth)
+
+	return int(titleW), int(descriptionW), int(leftW), int(remainderW)
+}
