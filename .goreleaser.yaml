@@ -66,8 +66,6 @@ changelog:
       order: 5
   filters:
     exclude:
-      - "^docs:"
-      - "^test:"
       - "^Merge pull request"
       - "^Merge branch"
   abbrev: 7 # Short commit hash length
