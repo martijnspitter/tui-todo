@@ -115,7 +115,7 @@ var (
 	minWidthTitle      = 50.0
 	maxWidthTitleRatio = 0.2
 
-	minWidthDesc       = 50.0
+	minWidthDesc      = 50.0
 	maxWidthDescRatio = 0.4
 )
 
@@ -124,6 +124,7 @@ func (t *TuiService) DetermineMaxWidthsForTodo(screenWidth, requiredItemsWidth, 
 
 	titleW := max(availableW*maxWidthTitleRatio, minWidthTitle)
 	descriptionW := max(availableW*maxWidthDescRatio, minWidthDesc)
+	leftW := titleW + descriptionW
 	remainderW := availableW - leftW - float64(dueDateWidth)
 
 	return int(titleW), int(descriptionW), int(leftW), int(remainderW)

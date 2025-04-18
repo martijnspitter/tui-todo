@@ -81,13 +81,13 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 
 	requiredItemsWidth := statusLength + lipgloss.Width(selected) + lipgloss.Width(priorityMarker)
 
-	titleWidth, desciptionWidth, leftWidth, remainderWidth := d.tuiService.DetermineMaxWidthsForTodo(width, requiredItemsWidth, lipgloss.Width(dueDate))
+	titleWidth, descriptionWidth, leftWidth, remainderWidth := d.tuiService.DetermineMaxWidthsForTodo(width, requiredItemsWidth, lipgloss.Width(dueDate))
 
 	title := styling.TextStyle.MarginRight(1).Width(titleWidth).Render(truncateString(i.Title(), titleWidth))
 
 	descStr := ""
-	if desciptionWidth > 50 {
-		descStr = styling.SubtextStyle.Width(desciptionWidth).Render(truncateString(i.Description(), desciptionWidth))
+	if descriptionWidth > 50 {
+		descStr = styling.SubtextStyle.Width(descriptionWidth).Render(truncateString(i.Description(), descriptionWidth))
 	} else {
 		descStr = ""
 	}
