@@ -52,6 +52,7 @@
   "field.due_date": "Due Date (YYYY-MM-DD HH:MM or empty to clear)",
   "field.priority": "Priority",
   "field.status": "Status",
+  "field.updated_at": "Updated At",
 
   "help.ctrl_n": "New",
   "help.ctrl_e": "Edit",
