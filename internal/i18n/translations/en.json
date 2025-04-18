@@ -9,6 +9,8 @@
   "priority.low": "Low",
   "priority.medium": "Medium",
   "priority.high": "High",
+  "priority.major": "Major",
+  "priority.critical": "Critical",
   "priority.unknown": "Unknown",
 
   "action.new": "New Todo",
