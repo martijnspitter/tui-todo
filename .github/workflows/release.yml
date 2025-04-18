@@ -34,115 +34,25 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Clean Go module cache
-        run: go clean -modcache
-
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
-
-      - name: Extract version from tag
-        id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - name: Build binary
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          go build -o ${{ matrix.output }} -ldflags="-X 'github.com/martijnspitter/tui-todo/internal/version.version=v${{ steps.get_version.outputs.VERSION }}'" ./cmd/tui-todo
-
-      - name: Create installer script
-        run: |
-          if [[ "${{ matrix.goos }}" == "windows" ]]; then
-            # Create PowerShell installer
-            cat > install.ps1 << 'EOFPS'
-          $INSTALL_DIR = "$env:USERPROFILE\bin"
-          if (!(Test-Path $INSTALL_DIR)) { New-Item -ItemType Directory -Path $INSTALL_DIR }
-          Copy-Item -Path "todo.exe" -Destination "$INSTALL_DIR\" -Force
-          $currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
-          if (!$currentPath.Contains($INSTALL_DIR)) {
-              $newPath = "$currentPath;$INSTALL_DIR"
-              [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
-              Write-Host "Added $INSTALL_DIR to PATH. You may need to restart your terminal."
-          }
-          Write-Host "Installation complete. You can now run 'todo' from anywhere."
-          EOFPS
-          else
-            # Create shell installer
-            cat > install.sh << 'EOFSH'
-          #!/bin/bash
-          set -e
-
-          if [[ "$OSTYPE" == "darwin"* ]]; then
-              # More macOS-specific approach
-              if [[ -d "/usr/local/bin" ]] && [[ -w "/usr/local/bin" ]]; then
-                  # If /usr/local/bin exists and is writable (common on Intel Macs)
-                  INSTALL_DIR="/usr/local/bin"
-              elif [[ -d "/opt/homebrew/bin" ]] && [[ -w "/opt/homebrew/bin" ]]; then
-                  # If Homebrew is installed on Apple Silicon Macs
-                  INSTALL_DIR="/opt/homebrew/bin"
-              else
-                  # Fallback to user's home directory
-                  INSTALL_DIR="$HOME/bin"
-              fi
-          else
-              # Linux approach
-              INSTALL_DIR="$HOME/.local/bin"
-          fi
-
-          mkdir -p "$INSTALL_DIR"
-          cp todo "$INSTALL_DIR/"
-          chmod +x "$INSTALL_DIR/todo"
-
-          xattr -d com.apple.quarantine "$INSTALL_DIR/todo" 2>/dev/null || true
-
-          echo "Installed todo to $INSTALL_DIR"
-          echo "The quarantine attribute has been removed to bypass Gatekeeper warnings."
-
-          if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
-              echo "Please add $INSTALL_DIR to your PATH to use todo from anywhere."
-              echo "For example, add this line to your shell profile:"
-              echo "  export PATH=\"\$PATH:$INSTALL_DIR\""
-          else
-              echo "You can now run 'todo' from anywhere."
-          fi
-          EOFSH
-            chmod +x install.sh
-          fi
-
-      - name: Package application
-        run: |
-          if [[ "${{ matrix.goos }}" == "windows" ]]; then
-            zip -r tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.zip ${{ matrix.output }} install.ps1
-          else
-            tar -czvf tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz ${{ matrix.output }} install.sh
-          fi
-
-      - name: Generate changelog
-        id: changelog
-        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
-        run: |
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -z "$PREVIOUS_TAG" ]; then
-            CHANGELOG=$(git log --pretty=format:"* %s (%h)" ${{ github.ref }})
-          else
-            CHANGELOG=$(git log --pretty=format:"* %s (%h)" $PREVIOUS_TAG..${{ github.ref }})
-          fi
-          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGELOG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      # Use softprops/action-gh-release for all builds
-      - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
+          go-version: stable
+      # More assembly might be required: Docker logins, GPG, etc.
+      # It all depends on your needs.
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
         with:
-          name: Release ${{ github.ref_name }}
-          # Only include the changelog in one job to avoid duplicate content
-          body: ${{ matrix.goos == 'linux' && matrix.goarch == 'amd64' && format('## Changes in this release\n\n{0}\n\n## Installation\n\nDownload the appropriate package for your operating system and follow the installation instructions.', steps.changelog.outputs.CHANGELOG) || '' }}
-          files: |
-            tui-todo-${{ matrix.goos }}-${{ matrix.goarch }}.${{ matrix.goos == 'windows' && 'zip' || 'tar.gz' }}
+          # either 'goreleaser' (default) or 'goreleaser-pro'
+          distribution: goreleaser
+          # 'latest', 'nightly', or a semver
+          version: "~> v2"
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Your GoReleaser Pro key, if you are using the 'goreleaser-pro' distribution
+          # GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}

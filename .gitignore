@@ -2,3 +2,5 @@
 *todo.sql
 *coverage.out
 release.sh
+# Added by goreleaser init:
+dist/
