@@ -47,6 +47,6 @@ jobs:
           distribution: goreleaser
           # 'latest', 'nightly', or a semver
           version: "~> v2"
-          args: release --clean --timeout=10m --debug
+          args: release --clean --timeout=10m
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
