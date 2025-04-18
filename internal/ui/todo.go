@@ -27,7 +27,11 @@ func (i *TodoItem) Title() string {
 }
 
 func (i *TodoItem) Description() string {
-	return i.todo.Description
+	// Replace newline characters with enter symbol
+	cleanDesc := strings.ReplaceAll(i.todo.Description, "\n", " ↵ ")
+	// Also handle Windows-style newlines
+	cleanDesc = strings.ReplaceAll(cleanDesc, "\r", "")
+	return cleanDesc
 }
 
 func (i *TodoItem) FilterValue() string {
@@ -61,35 +65,42 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 	if i.todo.Status != models.Doing {
 		statusMarker = statusMarker + " "
 	}
+	// Add due date if present
+	dueDate := ""
+	if i.todo.DueDate != nil {
+		translatedDueDate := d.translator.Tf("ui.due", map[string]interface{}{"Time": i.todo.DueDate.Format(time.Stamp)})
+		dueDate = styling.GetStyledDueDate(translatedDueDate, i.todo.Priority)
+
+	}
+
 	statusLength := 0
 
 	if d.tuiService.CurrentView == service.AllPane {
 		statusLength = lipgloss.Width(statusMarker)
 	}
 
-	title := styling.TextStyle.MarginRight(1).Width(20).Render(truncateString(i.Title(), 20))
+	requiredItemsWidth := statusLength + lipgloss.Width(selected) + lipgloss.Width(priorityMarker)
 
-	leftElementsWidth := lipgloss.Width(selected) + lipgloss.Width(priorityMarker) + lipgloss.Width(title) + statusLength
-	descMaxWidth := width - leftElementsWidth
+	titleWidth, descriptionWidth, leftWidth, remainderWidth := d.tuiService.DetermineMaxWidthsForTodo(width, requiredItemsWidth, lipgloss.Width(dueDate))
+
+	title := styling.TextStyle.MarginRight(1).Width(titleWidth).Render(truncateString(i.Title(), titleWidth))
+
 	descStr := ""
-	if descMaxWidth > 50 {
-		descStr = styling.SubtextStyle.Width(50).Render(truncateString(i.Description(), 50))
+	if descriptionWidth > 50 {
+		descStr = styling.SubtextStyle.Width(descriptionWidth).Render(truncateString(i.Description(), descriptionWidth))
 	} else {
 		descStr = ""
 	}
 
-	if leftElementsWidth >= width {
+	if leftWidth >= width {
 		widthAvailableForTitle := width - lipgloss.Width(selected) - 1
 		shortTitle := styling.TextStyle.MarginRight(1).Width(widthAvailableForTitle).Render(truncateString(i.Title(), widthAvailableForTitle))
 		row := lipgloss.JoinHorizontal(lipgloss.Center, selected, shortTitle)
 		fmt.Fprint(w, row)
 		return
 	}
-	leftElementsWithDescWidth := leftElementsWidth + lipgloss.Width(descStr)
 
 	var rightElements []string
-
-	rightAvailableWidth := width - leftElementsWithDescWidth - 2
 
 	type elementInfo struct {
 		element  string
@@ -97,18 +108,6 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 		priority int
 	}
 	var elementsToCheck []elementInfo
-
-	// Add due date if present
-	dueDate := ""
-	if i.todo.DueDate != nil {
-		translatedDueDate := d.translator.Tf("ui.due", map[string]interface{}{"Time": i.todo.DueDate.Format(time.Stamp)})
-		dueDate = styling.GetStyledDueDate(translatedDueDate, i.todo.Priority)
-		elementsToCheck = append(elementsToCheck, struct {
-			element  string
-			index    int
-			priority int
-		}{dueDate, 1, 3})
-	}
 
 	tags := ""
 	for _, tag := range i.todo.Tags {
@@ -121,6 +120,12 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 			priority int
 		}{tags, 2, 1})
 	}
+
+	elementsToCheck = append(elementsToCheck, struct {
+		element  string
+		index    int
+		priority int
+	}{dueDate, 1, 3})
 
 	translatedUpdatedAt := d.translator.Tf("ui.updated", map[string]interface{}{"Time": i.todo.UpdatedAt.Format(time.Stamp)})
 	updatedAt := styling.GetStyledUpdatedAt(translatedUpdatedAt)
@@ -138,7 +143,7 @@ func (d TodoModel) Render(w io.Writer, m list.Model, index int, listItem list.It
 		}
 
 		// If everything fits, we're done
-		if totalWidth <= rightAvailableWidth || len(elementsToCheck) == 0 {
+		if totalWidth <= remainderWidth || len(elementsToCheck) == 0 {
 			break
 		}
 
