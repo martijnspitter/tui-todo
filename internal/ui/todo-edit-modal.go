@@ -189,9 +189,15 @@ func (m *TodoEditModal) View() string {
 	for status := models.Open; status <= models.Done; status++ {
 		selected := status == m.status
 		hovered := m.editState == editState(int(status)+9)
+		prefix := ""
+		spacer := " "
+		if !selected && !hovered {
+			prefix = " "
+			spacer = ""
+		}
 		translatedStatus := m.translator.T(status.String())
-		tab := styling.GetStyledStatus(translatedStatus, status, selected, true, hovered)
-		statusTabs = append(statusTabs, tab)
+		tab := styling.GetStyledStatus(prefix+translatedStatus, status, selected, true, hovered)
+		statusTabs = append(statusTabs, tab+spacer)
 	}
 
 	statusSection := lipgloss.JoinHorizontal(lipgloss.Center, statusTabs...)

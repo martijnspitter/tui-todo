@@ -1315,12 +1315,12 @@ func TestAdvanceStatus(t *testing.T) {
 			wantError:      false,
 		},
 		{
-			name:           "Advance from Done to Open (cycle)",
+			name:           "Advance from Done error",
 			todoID:         3,
 			initialStatus:  models.Done,
 			expectedStatus: models.Open,
-			mockError:      nil,
-			wantError:      false,
+			mockError:      errors.New("update error"),
+			wantError:      true,
 		},
 		{
 			name:           "Error fetching todo",
