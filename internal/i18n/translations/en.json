@@ -1,6 +1,11 @@
 {
   "app.title": "TUI Todo",
 
+  "update_available": "Update available!",
+  "version": "Version {{.Version}}",
+  "update_required": "Update required",
+  "update_required_subtitle": "Please update to the latest version to continue. The new version includes the following changes:",
+
   "status.open": "Open",
   "status.doing": "Doing",
   "status.done": "Done",

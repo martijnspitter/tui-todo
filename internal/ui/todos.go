@@ -234,6 +234,11 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.loadTodosCmd())
 		}
 
+	case UpdateAvailableMsg:
+		if msg.ForceUpdate {
+			return m, m.showUpdateModalCmd(msg)
+		}
+
 	case showModalMsg:
 		return m, tea.WindowSize()
 	}
@@ -353,6 +358,14 @@ type modalCloseMsg struct {
 	reload bool
 }
 
+type UpdateAvailableMsg struct {
+	Version     string
+	URL         string
+	Notes       string
+	ForceUpdate bool
+	HasUpdate   bool
+}
+
 // ===========================================================================
 // Commands
 // ===========================================================================
@@ -425,5 +438,19 @@ func (m *TodosModel) toggleArchiveCmd(todoID int64, isArchived bool) tea.Cmd {
 		return todoToggleArchived{
 			action: action,
 		}
+	}
+}
+
+func (m *TodosModel) showUpdateModalCmd(msg UpdateAvailableMsg) tea.Cmd {
+	return func() tea.Msg {
+		m.tuiService.SwitchToUpdateModalView()
+		m.modalComponent = NewUpdateModal(
+			msg.Notes,
+			m.width,
+			m.height,
+			m.tuiService,
+			m.translator,
+		)
+		return showModalMsg{}
 	}
 }
