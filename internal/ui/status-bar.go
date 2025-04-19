@@ -101,7 +101,7 @@ func (m *StatusBar) View() string {
 			" 🔔",
 			m.translator.T("update_available"),
 		)
-	} else if version != "" {
+	} else if m.Version != "" {
 		version = versionStyle.Render(
 			m.translator.Tf("version", map[string]interface{}{"Version": m.Version}),
 		)
