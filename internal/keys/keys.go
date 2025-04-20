@@ -23,6 +23,7 @@ type KeyMap struct {
 	End            key.Binding
 	TagFilter      key.Binding
 	Save           key.Binding
+	About          key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -106,6 +107,10 @@ func DefaultKeyMap() KeyMap {
 		Save: key.NewBinding(
 			key.WithKeys("ctrl+s"),
 			key.WithHelp("ctrl+s", "help.save"),
+		),
+		About: key.NewBinding(
+			key.WithKeys("i"),
+			key.WithHelp("i", "help.i"),
 		),
 	}
 }

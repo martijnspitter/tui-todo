@@ -171,6 +171,9 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						InfoToast),
 				)
 			}
+
+		case key.Matches(msg, m.tuiService.KeyMap.About):
+			return m, m.showAboutModalCmd()
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -234,9 +237,9 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.loadTodosCmd())
 		}
 
-	case UpdateAvailableMsg:
+	case UpdateCheckCompletedMsg:
 		if msg.ForceUpdate {
-			return m, m.showUpdateModalCmd(msg)
+			return m, m.showUpdateModalCmd()
 		}
 
 	case showModalMsg:
@@ -358,12 +361,8 @@ type modalCloseMsg struct {
 	reload bool
 }
 
-type UpdateAvailableMsg struct {
-	Version     string
-	URL         string
-	Notes       string
+type UpdateCheckCompletedMsg struct {
 	ForceUpdate bool
-	HasUpdate   bool
 }
 
 // ===========================================================================
@@ -441,13 +440,27 @@ func (m *TodosModel) toggleArchiveCmd(todoID int64, isArchived bool) tea.Cmd {
 	}
 }
 
-func (m *TodosModel) showUpdateModalCmd(msg UpdateAvailableMsg) tea.Cmd {
+func (m *TodosModel) showUpdateModalCmd() tea.Cmd {
 	return func() tea.Msg {
 		m.tuiService.SwitchToUpdateModalView()
 		m.modalComponent = NewUpdateModal(
-			msg.Notes,
 			m.width,
 			m.height,
+			m.service,
+			m.tuiService,
+			m.translator,
+		)
+		return showModalMsg{}
+	}
+}
+
+func (m *TodosModel) showAboutModalCmd() tea.Cmd {
+	return func() tea.Msg {
+		m.tuiService.SwitchToAboutModalView()
+		m.modalComponent = NewAboutModal(
+			m.width,
+			m.height,
+			m.service,
 			m.tuiService,
 			m.translator,
 		)
