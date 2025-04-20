@@ -51,31 +51,73 @@ A powerful, terminal-based todo application built with Go. Manage your tasks eff
 
 ## Installation
 
-### macOS and Linux
+### macOS
+
+```bash
+ brew tap martijnspitter/tui-todo
+ brew install tui-todo
+```
+
+### Linux
+
+#### Option 1: Manual Installation
 
 ```bash
 # Download the appropriate version for your system
-curl -L -o tui-todo.tar.gz https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m).tar.gz
+curl -L -o tui-todo.tar.gz https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo_Linux_$(if [ "$(uname -m)" = "x86_64" ]; then echo "x86_64"; else echo "$(uname -m)"; fi).tar.gz
 
-# Extract
+# Extract the archive
 tar -xzf tui-todo.tar.gz
 
-# Run installer
-./install.sh
+# Move the binary to a directory in your PATH
+sudo mv tui-todo /usr/local/bin/todo
+
+# Make it executable
+sudo chmod +x /usr/local/bin/todo
+
+# Verify installation
+todo --version
 
 # Clean up
-rm tui-todo.tar.gz todo install.sh
+rm -f tui-todo.tar.gz
+```
 
-# Now you can use the app from anywhere
-todo
+#### Option 2: Using Homebrew on Linux
+
+```bash
+# If you have Homebrew for Linux installed
+brew tap martijnspitter/tui-todo
+brew install tui-todo
 ```
 
 ### Windows
 
-1. Download the [latest Windows release](https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo-windows-amd64.zip)
-2. Extract the ZIP file
-3. Right-click on `install.ps1` and select "Run with PowerShell"
-4. Open a new PowerShell window and run `todo`
+```powershell
+# Download the latest release (Run in PowerShell)
+$url = "https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo_Windows_x86_64.zip"
+$output = "$env:TEMP\tui-todo.zip"
+Invoke-WebRequest -Uri $url -OutFile $output
+
+# Extract to a permanent location
+$installDir = "$env:LOCALAPPDATA\Programs\tui-todo"
+if (!(Test-Path $installDir)) { New-Item -ItemType Directory -Path $installDir | Out-Null }
+Expand-Archive -Path $output -DestinationPath $installDir -Force
+
+# Rename the binary
+Rename-Item -Path "$installDir\tui-todo.exe" -NewName "todo.exe" -Force
+
+# Add to PATH (requires admin if you want to add to system PATH)
+$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+if ($userPath -notlike "*$installDir*") {
+    [Environment]::SetEnvironmentVariable("Path", "$userPath;$installDir", "User")
+    Write-Host "Added to PATH. Please restart your terminal for changes to take effect."
+}
+
+# Clean up
+Remove-Item $output
+
+Write-Host "Installation complete! Type 'todo' in a new terminal window to start the application."
+```
 
 ## Keyboard Shortcuts
 
