@@ -82,7 +82,7 @@ brews:
     homepage: "https://github.com/martijnspitter/tui-todo"
     description: "Terminal-based todo application with rich features"
     caveats: |
-      Thank you for installing TUI Todoo!
+      Thank you for installing TUI Todo!
       Run 'todo' to start the application.
     license: "MIT" # Replace with your actual license
     directory: Formula
