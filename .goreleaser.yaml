@@ -75,7 +75,7 @@ brews:
     repository:
       owner: martijnspitter
       name: homebrew-tui-todo
-      token: "{{ .Env.GITHUB_TOKEN }}"
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     commit_author:
       name: goreleaserbot
       email: goreleaser@github.com
