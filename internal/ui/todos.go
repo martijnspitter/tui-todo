@@ -226,7 +226,7 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			SuccessToast))
 
 	case todoErrorMsg:
-		cmds = append(cmds, ShowDefaultToast(msg.Error(), ErrorToast))
+		cmds = append(cmds, ShowDefaultToast(m.translator.T(msg.Error()), ErrorToast))
 
 	case modalCloseMsg:
 		m.tuiService.SwitchToListView()
