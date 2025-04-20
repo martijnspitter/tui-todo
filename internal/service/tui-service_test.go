@@ -232,6 +232,16 @@ func TestViewSwitchingMethods(t *testing.T) {
 			switchFunc:   func(s *service.TuiService) { s.SwitchToConfirmDeleteView() },
 			expectedView: service.ConfirmDeleteModal,
 		},
+		{
+			name:         "Switch to Update modal view",
+			switchFunc:   func(s *service.TuiService) { s.SwitchToUpdateModalView() },
+			expectedView: service.UpdateModal,
+		},
+		{
+			name:         "Switch to About modal view",
+			switchFunc:   func(s *service.TuiService) { s.SwitchToAboutModalView() },
+			expectedView: service.AboutModal,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -286,6 +296,11 @@ func TestShouldShowModal(t *testing.T) {
 		{
 			name:        "UpdateModal is modal",
 			view:        service.UpdateModal,
+			expectModal: true,
+		},
+		{
+			name:        "About Modal is modal",
+			view:        service.AboutModal,
 			expectModal: true,
 		},
 	}

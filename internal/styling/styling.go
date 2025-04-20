@@ -3,6 +3,7 @@ package styling
 import (
 	"fmt"
 
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martijnspitter/tui-todo/internal/models"
 )
@@ -217,4 +218,20 @@ func GetSelectedBlock(selected bool) string {
 		Align(lipgloss.Center).
 		MarginRight(1).
 		Render("")
+}
+
+func RenderMarkdown(md string) string {
+	r, _ := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(80),
+	)
+
+	rendered, err := r.Render(md)
+	if err != nil {
+		// Fallback to raw markdown if rendering fails
+		return md
+	}
+
+	return rendered
+
 }
