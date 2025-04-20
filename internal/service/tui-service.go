@@ -14,6 +14,7 @@ const (
 	AddEditModal
 	ConfirmDeleteModal
 	UpdateModal
+	AboutModal
 )
 
 type TuiService struct {
@@ -110,7 +111,10 @@ func (t *TuiService) SwitchToConfirmDeleteView() {
 }
 
 func (t *TuiService) ShouldShowModal() bool {
-	return t.CurrentView == AddEditModal || t.CurrentView == ConfirmDeleteModal || t.CurrentView == UpdateModal
+	return (t.CurrentView == AddEditModal ||
+		t.CurrentView == ConfirmDeleteModal ||
+		t.CurrentView == UpdateModal ||
+		t.CurrentView == AboutModal)
 }
 
 func (t *TuiService) ToggleArchivedInAllView() {
@@ -144,4 +148,9 @@ func (t *TuiService) DetermineMaxWidthsForTodo(screenWidth, requiredItemsWidth, 
 
 func (t *TuiService) SwitchToUpdateModalView() {
 	t.CurrentView = UpdateModal
+}
+
+func (t *TuiService) SwitchToAboutModalView() {
+	t.PrevView = t.CurrentView
+	t.CurrentView = AboutModal
 }

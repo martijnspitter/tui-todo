@@ -6,6 +6,10 @@
   "update_required": "Update required",
   "update_required_subtitle": "Please update to the latest version to continue. The new version includes the following changes:",
 
+  "about_title": "About TUI Todo",
+  "about_subtitle": "A powerful, terminal-based todo application built with Go. Manage your tasks efficiently without leaving the command line.",
+  "about_notes_title": "Release Notes {{.Version}}",
+
   "status.open": "Open",
   "status.doing": "Doing",
   "status.done": "Done",
@@ -79,6 +83,7 @@
   "help.end": "Go to end",
   "help.tag_filter": "Filter by tag",
   "help.save": "Save",
+  "help.i": "About",
 
   "ui.updated": "Updated: {{.Time}}",
   "ui.due": "Due: {{.Time}}",

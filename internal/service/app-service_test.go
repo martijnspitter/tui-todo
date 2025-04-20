@@ -1494,3 +1494,169 @@ func TestGetFilteredTodos(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdateInfoMethods(t *testing.T) {
+	// Test SetUpdateInfo and GetUpdateInfo
+	t.Run("SetUpdateInfo_GetUpdateInfo", func(t *testing.T) {
+		// Setup
+		mockRepo := &MockTodoRepository{}
+		svc := service.NewAppService(mockRepo)
+
+		version := "1.2.3"
+		url := "https://example.com/releases"
+		notes := "Bug fixes and performance improvements"
+		forceUpdate := true
+		hasUpdate := true
+
+		// Execute
+		svc.SetUpdateInfo(version, url, notes, forceUpdate, hasUpdate)
+		updateInfo := svc.GetUpdateInfo()
+
+		// Verify
+		if updateInfo == nil {
+			t.Fatal("Expected update info to be set, got nil")
+		}
+
+		if updateInfo.Version != version {
+			t.Errorf("Expected version %s, got %s", version, updateInfo.Version)
+		}
+
+		if updateInfo.URL != url {
+			t.Errorf("Expected URL %s, got %s", url, updateInfo.URL)
+		}
+
+		if updateInfo.Notes != notes {
+			t.Errorf("Expected release notes %s, got %s", notes, updateInfo.Notes)
+		}
+
+		if updateInfo.ForceUpdate != forceUpdate {
+			t.Errorf("Expected forceUpdate %v, got %v", forceUpdate, updateInfo.ForceUpdate)
+		}
+
+		if updateInfo.HasUpdate != hasUpdate {
+			t.Errorf("Expected hasUpdate %v, got %v", hasUpdate, updateInfo.HasUpdate)
+		}
+
+		// CheckedAt should be recent
+		timeDiff := time.Since(updateInfo.CheckedAt)
+		if timeDiff > 1*time.Second {
+			t.Errorf("CheckedAt time should be recent, but was %v ago", timeDiff)
+		}
+	})
+
+	// Test HasUpdate method
+	t.Run("HasUpdate", func(t *testing.T) {
+		testCases := []struct {
+			name      string
+			hasUpdate bool
+			setupInfo bool
+			expected  bool
+		}{
+			{
+				name:      "Has update true",
+				hasUpdate: true,
+				setupInfo: true,
+				expected:  true,
+			},
+			{
+				name:      "Has update false",
+				hasUpdate: false,
+				setupInfo: true,
+				expected:  false,
+			},
+			{
+				name:      "No update info",
+				hasUpdate: false,
+				setupInfo: false,
+				expected:  false,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				// Setup
+				mockRepo := &MockTodoRepository{}
+				svc := service.NewAppService(mockRepo)
+
+				if tc.setupInfo {
+					svc.SetUpdateInfo("1.0.0", "url", "notes", false, tc.hasUpdate)
+				}
+
+				// Execute
+				result := svc.HasUpdate()
+
+				// Verify
+				if result != tc.expected {
+					t.Errorf("Expected HasUpdate() to return %v, got %v", tc.expected, result)
+				}
+			})
+		}
+	})
+
+	// Test NeedsForceUpdate method
+	t.Run("NeedsForceUpdate", func(t *testing.T) {
+		testCases := []struct {
+			name        string
+			forceUpdate bool
+			setupInfo   bool
+			expected    bool
+		}{
+			{
+				name:        "Force update true",
+				forceUpdate: true,
+				setupInfo:   true,
+				expected:    true,
+			},
+			{
+				name:        "Force update false",
+				forceUpdate: false,
+				setupInfo:   true,
+				expected:    false,
+			},
+			{
+				name:        "No update info",
+				forceUpdate: false,
+				setupInfo:   false,
+				expected:    false,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				// Setup
+				mockRepo := &MockTodoRepository{}
+				svc := service.NewAppService(mockRepo)
+
+				if tc.setupInfo {
+					svc.SetUpdateInfo("1.0.0", "url", "notes", tc.forceUpdate, true)
+				}
+
+				// Execute
+				result := svc.NeedsForceUpdate()
+
+				// Verify
+				if result != tc.expected {
+					t.Errorf("Expected NeedsForceUpdate() to return %v, got %v", tc.expected, result)
+				}
+			})
+		}
+	})
+
+	// Test initialization
+	t.Run("UpdateInfo_Initialization", func(t *testing.T) {
+		// Setup
+		mockRepo := &MockTodoRepository{}
+		svc := service.NewAppService(mockRepo)
+
+		// Verify update info is initialized to empty but not nil
+		updateInfo := svc.GetUpdateInfo()
+		if updateInfo == nil {
+			t.Fatal("Expected updateInfo to be initialized as non-nil")
+		}
+
+		// Verify default values
+		if updateInfo.HasUpdate || updateInfo.ForceUpdate {
+			t.Errorf("Expected new updateInfo to have HasUpdate and ForceUpdate set to false")
+		}
+	})
+}

@@ -76,7 +76,7 @@ func CheckForUpdates(ctx context.Context, currentVersion string) (*UpdateInfo, e
 		forceUpdate := isMajorUpdate || isMinorUpdate
 
 		return &UpdateInfo{
-			Version:      currentVersion,
+			Version:      tagVersion,
 			ReleaseURL:   release.HTMLURL,
 			ReleaseNotes: release.Body,
 			ForceUpdate:  forceUpdate,
