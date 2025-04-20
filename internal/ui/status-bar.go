@@ -16,6 +16,8 @@ type StatusBar struct {
 	translator *i18n.TranslationService
 	width      int
 	height     int
+	Version    string
+	HasUpdate  bool
 }
 
 func NewStatusBar(service *service.AppService, tuiService *service.TuiService, translator *i18n.TranslationService) *StatusBar {
@@ -23,6 +25,7 @@ func NewStatusBar(service *service.AppService, tuiService *service.TuiService, t
 		service:    service,
 		tuiService: tuiService,
 		translator: translator,
+		Version:    "",
 	}
 }
 
@@ -35,6 +38,9 @@ func (m *StatusBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+	case UpdateAvailableMsg:
+		m.Version = msg.Version
+		m.HasUpdate = msg.HasUpdate
 	}
 
 	return m, nil
@@ -48,6 +54,10 @@ func (m *StatusBar) View() string {
 		Background(styling.BackgroundColor).
 		Foreground(styling.TextColor).
 		Width(m.width)
+
+	versionStyle := lipgloss.NewStyle().
+		Background(styling.BackgroundColor).
+		Foreground(styling.TextColor)
 
 	// Filter option style
 	filterOptionStyle := lipgloss.NewStyle().
@@ -84,10 +94,27 @@ func (m *StatusBar) View() string {
 	for i := 1; i < len(filterOptions); i++ {
 		content = lipgloss.JoinHorizontal(lipgloss.Center, content, filterOptions[i])
 	}
-	remainingWidth := m.width - lipgloss.Width(content) - lipgloss.Width(archivedOption) - 4
-	spacer := filterOptionStyle.Render(strings.Repeat(" ", remainingWidth))
 
-	content = lipgloss.JoinHorizontal(lipgloss.Center, content, spacer, archivedOption)
+	version := ""
+	if m.HasUpdate {
+		version = versionStyle.Render(
+			" 🔔",
+			m.translator.T("update_available"),
+		)
+	} else if m.Version != "" {
+		version = versionStyle.Render(
+			m.translator.Tf("version", map[string]interface{}{"Version": m.Version}),
+		)
+	}
+
+	remainingWidth := m.width - lipgloss.Width(content) - lipgloss.Width(archivedOption) - lipgloss.Width(version) - 4
+
+	spacer := ""
+	if remainingWidth > 0 {
+		spacer = filterOptionStyle.Render(strings.Repeat(" ", remainingWidth))
+	}
+
+	content = lipgloss.JoinHorizontal(lipgloss.Center, content, spacer, archivedOption, version)
 
 	return statusBarStyle.Render(content)
 }

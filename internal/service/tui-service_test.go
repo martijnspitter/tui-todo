@@ -283,6 +283,11 @@ func TestShouldShowModal(t *testing.T) {
 			view:        service.ConfirmDeleteModal,
 			expectModal: true,
 		},
+		{
+			name:        "UpdateModal is modal",
+			view:        service.UpdateModal,
+			expectModal: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -404,6 +409,61 @@ func TestSwitchToListView(t *testing.T) {
 			if svc.CurrentView != tc.expectedView {
 				t.Errorf("Expected CurrentView to be %v after SwitchToListView(), got %v",
 					tc.expectedView, svc.CurrentView)
+			}
+		})
+	}
+}
+
+func TestSwitchToUpdateModalView(t *testing.T) {
+	svc := service.NewTuiService()
+	// Switch to update modal view
+	svc.SwitchToUpdateModalView()
+
+	// Check if CurrentView is now UpdateModal
+	if svc.CurrentView != service.UpdateModal {
+		t.Errorf("Expected CurrentView to be UpdateModal, got %v", svc.CurrentView)
+	}
+}
+
+func TestModalPreservesPrevView(t *testing.T) {
+	testCases := []struct {
+		name             string
+		initialView      service.ViewType
+		expectedPrevView service.ViewType
+	}{
+		{
+			name:             "Preserve OpenPane as previous view",
+			initialView:      service.OpenPane,
+			expectedPrevView: service.OpenPane,
+		},
+		{
+			name:             "Preserve DoingPane as previous view",
+			initialView:      service.DoingPane,
+			expectedPrevView: service.DoingPane,
+		},
+		{
+			name:             "Preserve DonePane as previous view",
+			initialView:      service.DonePane,
+			expectedPrevView: service.DonePane,
+		},
+		{
+			name:             "Preserve AllPane as previous view",
+			initialView:      service.AllPane,
+			expectedPrevView: service.AllPane,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc := service.NewTuiService()
+			svc.CurrentView = tc.initialView
+
+			// Switch to update modal view
+			svc.SwitchToEditTodoView()
+
+			if svc.PrevView != tc.expectedPrevView {
+				t.Errorf("Expected PrevView to be %v after switching to modal, got %v",
+					tc.expectedPrevView, svc.PrevView)
 			}
 		})
 	}

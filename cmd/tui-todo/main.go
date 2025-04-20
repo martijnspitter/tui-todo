@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
@@ -17,18 +19,18 @@ import (
 )
 
 func main() {
-	version := version.GetVersion()
+	appVersion := version.GetVersion()
 	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v") {
-		fmt.Printf("todo version %s\n", version)
+		fmt.Printf("todo version %s\n", appVersion)
 		os.Exit(0)
 	}
 
-	logger := logger.InitLogger(version)
+	logger := logger.InitLogger(appVersion)
 	if logger != nil {
 		defer logger.Close()
 	}
 
-	todoRepo, err := repository.NewSQLiteTodoRepository(version)
+	todoRepo, err := repository.NewSQLiteTodoRepository(appVersion)
 	if err != nil {
 		log.Error("Failed to start db", err)
 		os.Exit(1)
@@ -49,6 +51,29 @@ func main() {
 		tea.WithAltScreen(),       // use the full size of the terminal in its "alternate screen buffer"
 		tea.WithMouseCellMotion(), // turn on mouse support so we can track the mouse wheel
 	)
+
+	go func() {
+		// Wait a short period to let the UI initialize
+		time.Sleep(1 * time.Second)
+
+		ctx := context.Background()
+		updateInfo, err := version.CheckForUpdates(ctx, appVersion)
+		if err != nil {
+			log.Error("Failed to check for updates", "error", err)
+			return
+		}
+
+		if updateInfo != nil {
+			// Send a message to the program to notify about the update
+			p.Send(ui.UpdateAvailableMsg{
+				Version:     updateInfo.Version,
+				URL:         updateInfo.ReleaseURL,
+				Notes:       updateInfo.ReleaseNotes,
+				ForceUpdate: updateInfo.ForceUpdate,
+				HasUpdate:   updateInfo.HasUpdate,
+			})
+		}
+	}()
 
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Alas, there's been an error: %v", err)
