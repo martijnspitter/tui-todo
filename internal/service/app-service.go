@@ -339,6 +339,10 @@ func (s *AppService) AdvanceStatus(todoID int64) (models.Status, error) {
 		return 0, fmt.Errorf("error.todos_not_found")
 	}
 
+	if todo.Status == models.Done {
+		return 0, fmt.Errorf("error.update_from_done")
+	}
+
 	var newStatus models.Status
 	switch todo.Status {
 	case models.Open:
@@ -347,9 +351,6 @@ func (s *AppService) AdvanceStatus(todoID int64) (models.Status, error) {
 	case models.Doing:
 		newStatus = models.Done
 		err = s.MarkAsDone(todoID)
-	case models.Done:
-		newStatus = models.Open
-		err = s.MarkAsOpen(todoID)
 	}
 
 	if err != nil {

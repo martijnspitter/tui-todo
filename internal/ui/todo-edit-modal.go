@@ -189,9 +189,15 @@ func (m *TodoEditModal) View() string {
 	for status := models.Open; status <= models.Done; status++ {
 		selected := status == m.status
 		hovered := m.editState == editState(int(status)+9)
+		prefix := ""
+		spacer := " "
+		if !selected && !hovered {
+			prefix = " "
+			spacer = ""
+		}
 		translatedStatus := m.translator.T(status.String())
-		tab := styling.GetStyledStatus(translatedStatus, status, selected, true, hovered)
-		statusTabs = append(statusTabs, tab)
+		tab := styling.GetStyledStatus(prefix+translatedStatus, status, selected, true, hovered)
+		statusTabs = append(statusTabs, tab+spacer)
 	}
 
 	statusSection := lipgloss.JoinHorizontal(lipgloss.Center, statusTabs...)
@@ -237,6 +243,15 @@ func (m *TodoEditModal) View() string {
 	}
 	dueDate := fmt.Sprintf("%s\n%s", dueDateField, m.dueDateInput.View())
 
+	updatedAtHeader := ""
+	updatedAt := ""
+	if m.todo.ID != 0 {
+		updatedAtHeader = m.translator.T("field.updated_at")
+		translatedUpdatedAt := m.translator.Tf("ui.updated", map[string]interface{}{"Time": m.todo.UpdatedAt.Format(time.Stamp)})
+		updatedAtField := styling.GetStyledUpdatedAt(translatedUpdatedAt)
+		updatedAt = fmt.Sprintf("%s\n%s", updatedAtHeader, updatedAtField)
+	}
+
 	header := m.translator.Tf("modal.edit_todo", map[string]interface{}{"ID": m.todo.ID})
 	if m.todo.ID == 0 {
 		header = m.translator.T("modal.new_todo")
@@ -246,7 +261,7 @@ func (m *TodoEditModal) View() string {
 
 	// Combine all content
 	content := fmt.Sprintf(
-		"%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
+		"%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s\n\n%s",
 		styling.TextStyle.Render(header),
 		title,
 		description,
@@ -254,6 +269,7 @@ func (m *TodoEditModal) View() string {
 		dueDate,
 		fmt.Sprintf("%s\n%s", priorityHeader, prioritySection),
 		fmt.Sprintf("%s\n%s", statusHeader, statusSection),
+		updatedAt,
 		help,
 	)
 
