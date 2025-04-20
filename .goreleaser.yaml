@@ -90,3 +90,58 @@ brews:
       bin.install "tui-todo" => "todo"  # This renames the binary when installing
     test: |
       system "#{bin}/todo", "--version"
+
+nfpms:
+  - id: tui-todo-packages
+    package_name: tui-todo
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Arch }}"
+
+    # The binary will be installed as "todo"
+    bindir: /usr/local/bin
+    builds:
+      - tui-todo
+
+    # Rename the binary during installation (similar to Homebrew)
+    contents:
+      - src: "tui-todo"
+        dst: "/usr/local/bin/todo"
+
+    # Package details
+    vendor: Martijn Spitter
+    homepage: https://github.com/martijnspitter/tui-todo
+    maintainer: Martijn Spitter info@martijnspitter.nl
+    description: Terminal-based todo application with rich features
+    license: MIT
+
+    # Dependencies (usually minimal for Go apps)
+    dependencies:
+      - libc6
+
+    # Supported formats
+    formats:
+      - deb
+      - rpm
+      - apk
+
+    # .deb specific
+    deb:
+      lintian_overrides:
+        - statically-linked-binary
+
+    # Package recommends
+    recommends:
+      - terminal-with-utf8-support
+
+snapcrafts:
+  - id: tui-todo
+    name: tui-todo
+    summary: Terminal-based todo application
+    description: |
+      A powerful terminal-based todo application built with Go.
+      Manage your tasks efficiently without leaving the command line.
+    grade: stable
+    confinement: strict
+    apps:
+      tui-todo:
+        command: todo
+        plugs: [home, network, desktop-legacy]
