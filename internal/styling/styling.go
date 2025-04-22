@@ -177,6 +177,8 @@ func GetStyledDueDate(text string, priority models.Priority) string {
 		LowPriorityColor,
 		MediumPriorityColor,
 		HighPriorityColor,
+		MajorPriorityColor,
+		CriticalPriorityColor,
 	}
 
 	textStyle := lipgloss.NewStyle().
