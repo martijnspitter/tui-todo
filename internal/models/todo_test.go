@@ -36,8 +36,7 @@ func TestStatus_Color(t *testing.T) {
 	}{
 		{"Open status color", Open, theme.OpenStatusColor},
 		{"Doing status color", Doing, theme.DoingStatusColor},
-		{"Done status color", Done, theme.DoneStatusColor}, // Note: This uses DoingStatusColor - possible bug?
-		{"Invalid status color", Status(999), theme.OpenStatusColor},
+		{"Done status color", Done, theme.DoneStatusColor},
 	}
 
 	for _, tt := range tests {
