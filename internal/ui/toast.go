@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/martijnspitter/tui-todo/internal/styling"
+	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
 // Toast types
@@ -96,28 +96,28 @@ func (m *ToastModel) View() string {
 	case ErrorToast:
 		style = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FFFFFF")).
-			Background(styling.ErrorColor).
+			Background(theme.ErrorColor).
 			Padding(1, 1).
 			Bold(true)
 
 	case WarningToast:
 		style = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#000000")).
-			Background(styling.WarningColor).
+			Background(theme.WarningColor).
 			Padding(1, 1).
 			Bold(true)
 
 	case SuccessToast:
 		style = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FFFFFF")).
-			Background(styling.SuccessColor).
+			Background(theme.SuccessColor).
 			Padding(1, 1).
 			Bold(true)
 
 	default: // InfoToast
 		style = lipgloss.NewStyle().
 			Foreground(lipgloss.Color("#FFFFFF")).
-			Background(styling.InfoColor).
+			Background(theme.InfoColor).
 			Padding(1, 1).
 			Bold(true)
 	}

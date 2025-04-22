@@ -6,7 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/service"
-	"github.com/martijnspitter/tui-todo/internal/styling"
+	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
 type FooterModel struct {
@@ -65,7 +65,7 @@ func (m *FooterModel) View() string {
 	// Join everything
 	helpText := m.help.View()
 	if m.tuiService.ShowConfirmQuit {
-		helpText = lipgloss.NewStyle().Foreground(styling.HelpTextColor).Render("Really quit? (Press ctrl+c/esc again to quit)")
+		helpText = lipgloss.NewStyle().Foreground(theme.HelpTextColor).Render("Really quit? (Press ctrl+c/esc again to quit)")
 	}
 
 	statusBar := m.statusBar.View()

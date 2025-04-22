@@ -6,57 +6,22 @@ import (
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martijnspitter/tui-todo/internal/models"
+	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
 var (
-	Mauve     = lipgloss.Color("#cba6f7")
-	Yellow    = lipgloss.Color("#f9e2af")
-	Lavender  = lipgloss.Color("#b4befe")
-	Rosewater = lipgloss.Color("#f2cdcd")
-
-	OpenStatusColor     = lipgloss.Color("#f5e0dc")
-	DoingStatusColor    = lipgloss.Color("#89b4fa")
-	DoneStatusColor     = lipgloss.Color("#a6e3a1")
-	ArchivedStatusColor = lipgloss.Color("#9399b2")
-
-	LowPriorityColor      = lipgloss.Color("#94e2d5")
-	MediumPriorityColor   = lipgloss.Color("#f0c6c6")
-	HighPriorityColor     = lipgloss.Color("#ef9f76")
-	MajorPriorityColor    = lipgloss.Color("#e78284")
-	CriticalPriorityColor = lipgloss.Color("#d20f39")
-
-	WhiteColor = lipgloss.Color("#fff")
-	BlackColor = lipgloss.Color("#11111b")
-
-	TextColor       = lipgloss.Color("#cdd6f4")
-	SubtextColor    = lipgloss.Color("#a6adc8")
-	HelpTextColor   = lipgloss.Color("#626262")
-	BackgroundColor = lipgloss.Color("#313244")
-	RowColor        = lipgloss.Color("#1e1e2e")
-
-	InfoColor    = lipgloss.Color("#186ddd")
-	WarningColor = lipgloss.Color("#ff7c03")
-	ErrorColor   = lipgloss.Color("#d13523")
-	SuccessColor = lipgloss.Color("#1b7e41")
-
-	FocusedStyle = lipgloss.NewStyle().Foreground(Mauve)
-	HoverStyle   = lipgloss.NewStyle().Foreground(Yellow)
-	RowStyle     = lipgloss.NewStyle().Background(BlackColor)
-	TextStyle    = lipgloss.NewStyle().Foreground(TextColor)
-	SubtextStyle = lipgloss.NewStyle().Foreground(SubtextColor)
+	FocusedStyle = lipgloss.NewStyle().Foreground(theme.Mauve)
+	HoverStyle   = lipgloss.NewStyle().Foreground(theme.Yellow)
+	RowStyle     = lipgloss.NewStyle().Background(theme.BlackColor)
+	TextStyle    = lipgloss.NewStyle().Foreground(theme.TextColor)
+	SubtextStyle = lipgloss.NewStyle().Foreground(theme.SubtextColor)
 
 	BorderWidth = 1
 	Padding     = 1
 )
 
 func GetStyledStatus(translatedStatus string, status models.Status, selected, omitNumber, hovered bool) string {
-	statusColors := map[models.Status]lipgloss.Color{
-		models.Open:  OpenStatusColor,
-		models.Doing: DoingStatusColor,
-		models.Done:  DoneStatusColor,
-	}
-
-	statusColor := statusColors[status]
+	statusColor := status.Color()
 
 	return GetStyledTagWithIndicator(int(status)+1, translatedStatus, statusColor, selected, omitNumber, hovered)
 }
@@ -64,7 +29,7 @@ func GetStyledStatus(translatedStatus string, status models.Status, selected, om
 func GetStyledTagWithIndicator(num int, text string, color lipgloss.Color, selected, omitNumber, hovered bool) string {
 	// Create indicator with number
 	indicator := lipgloss.NewStyle().
-		Foreground(BlackColor).
+		Foreground(theme.BlackColor).
 		Background(color).
 		Padding(0, 1, 0, 0).
 		Bold(true).
@@ -76,19 +41,19 @@ func GetStyledTagWithIndicator(num int, text string, color lipgloss.Color, selec
 	var rightCapStyle lipgloss.Style
 	if hovered {
 		textStyle = lipgloss.NewStyle().
-			Foreground(BlackColor).
-			Background(Yellow).
+			Foreground(theme.BlackColor).
+			Background(theme.Yellow).
 			Padding(0, 0)
 		leftCapStyle = lipgloss.NewStyle().
-			Foreground(Yellow).
+			Foreground(theme.Yellow).
 			Padding(0, 0)
 		rightCapStyle = lipgloss.NewStyle().
-			Foreground(Yellow).
+			Foreground(theme.Yellow).
 			Padding(0, 0).
 			MarginRight(2)
 	} else if selected {
 		textStyle = lipgloss.NewStyle().
-			Foreground(BlackColor).
+			Foreground(theme.BlackColor).
 			Background(color).
 			Padding(0, 0)
 		leftCapStyle = lipgloss.NewStyle().
@@ -102,20 +67,20 @@ func GetStyledTagWithIndicator(num int, text string, color lipgloss.Color, selec
 	} else {
 		// Inactive tab
 		textStyle = lipgloss.NewStyle().
-			Foreground(SubtextColor).
-			Background(BackgroundColor).
+			Foreground(theme.SubtextColor).
+			Background(theme.BackgroundColor).
 			Padding(0, 0)
 		leftCapStyle = lipgloss.NewStyle().
 			Foreground(color).
 			Padding(0, 0)
 		rightCapStyle = lipgloss.NewStyle().
-			Foreground(BackgroundColor).
+			Foreground(theme.BackgroundColor).
 			Padding(0, 0).
 			MarginRight(2)
 	}
 
 	if omitNumber {
-		leftCapStyle.Foreground(BackgroundColor)
+		leftCapStyle.Foreground(theme.BackgroundColor)
 	}
 
 	statusText := textStyle.Render(" " + text)
@@ -131,21 +96,14 @@ func GetStyledTagWithIndicator(num int, text string, color lipgloss.Color, selec
 }
 
 func GetStyledPriority(translatedP string, p models.Priority, selected, hovered bool) string {
-	priorityColors := []lipgloss.Color{
-		LowPriorityColor,
-		MediumPriorityColor,
-		HighPriorityColor,
-		MajorPriorityColor,
-		CriticalPriorityColor,
-	}
-	bgColor := BackgroundColor
-	textColor := SubtextColor
+	bgColor := theme.BackgroundColor
+	textColor := theme.SubtextColor
 	if selected {
-		bgColor = priorityColors[p]
-		textColor = BlackColor
+		bgColor = p.Color()
+		textColor = theme.BlackColor
 	}
 	if hovered {
-		bgColor = Yellow
+		bgColor = theme.Yellow
 	}
 
 	// Text section (status name)
@@ -161,8 +119,8 @@ func GetStyledPriority(translatedP string, p models.Priority, selected, hovered 
 
 func GetStyledUpdatedAt(text string) string {
 	textStyle := lipgloss.NewStyle().
-		Foreground(Lavender).
-		Background(BackgroundColor).
+		Foreground(theme.Lavender).
+		Background(theme.BackgroundColor).
 		Padding(0, 1).
 		Align(lipgloss.Center).
 		MarginRight(1)
@@ -173,15 +131,9 @@ func GetStyledUpdatedAt(text string) string {
 }
 
 func GetStyledDueDate(text string, priority models.Priority) string {
-	priorityColors := []lipgloss.Color{
-		LowPriorityColor,
-		MediumPriorityColor,
-		HighPriorityColor,
-	}
-
 	textStyle := lipgloss.NewStyle().
-		Foreground(priorityColors[priority]).
-		Background(BackgroundColor).
+		Foreground(priority.Color()).
+		Background(theme.BackgroundColor).
 		Padding(0, 1).
 		Align(lipgloss.Center).
 		MarginRight(1)
@@ -193,8 +145,8 @@ func GetStyledDueDate(text string, priority models.Priority) string {
 
 func GetStyledTag(tag string) string {
 	textStyle := lipgloss.NewStyle().
-		Foreground(BlackColor).
-		Background(Rosewater).
+		Foreground(theme.BlackColor).
+		Background(theme.Rosewater).
 		Padding(0, 1).
 		Align(lipgloss.Center).
 		MarginRight(1)
@@ -205,8 +157,8 @@ func GetStyledTag(tag string) string {
 func GetSelectedBlock(selected bool) string {
 	if selected {
 		return lipgloss.NewStyle().
-			Foreground(Yellow).
-			Background(Yellow).
+			Foreground(theme.Yellow).
+			Background(theme.Yellow).
 			Padding(0, 1).
 			Align(lipgloss.Center).
 			MarginRight(1).

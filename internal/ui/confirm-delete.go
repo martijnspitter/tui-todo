@@ -7,6 +7,7 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
+	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
 type todoDeletedMsg struct{}
@@ -25,17 +26,17 @@ type ConfirmDeleteModel struct {
 
 func NewConfirmDeleteModal(appService *service.AppService, tuiService *service.TuiService, translationService *i18n.TranslationService, todoID int64) *ConfirmDeleteModel {
 	normalStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(styling.SubtextColor)).
+		Foreground(lipgloss.Color(theme.SubtextColor)).
 		Padding(0, 1)
 
 	focusedStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(styling.TextColor)).
-		Background(styling.SuccessColor).
+		Foreground(lipgloss.Color(theme.TextColor)).
+		Background(theme.SuccessColor).
 		Padding(0, 1)
 
 	cancelFocusedStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(styling.TextColor)).
-		Background(styling.ErrorColor).
+		Foreground(lipgloss.Color(theme.TextColor)).
+		Background(theme.ErrorColor).
 		Padding(0, 1)
 
 	return &ConfirmDeleteModel{
@@ -111,7 +112,7 @@ func (m *ConfirmDeleteModel) View() string {
 		Border(lipgloss.RoundedBorder()).
 		Padding(1, 2).
 		Width(m.width / 2).
-		BorderForeground(styling.Mauve)
+		BorderForeground(theme.Mauve)
 
 	// Render buttons with appropriate styles
 	cancelView := m.cancelButton.View()
