@@ -14,6 +14,7 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
+	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
 type TodosModel struct {
@@ -302,7 +303,7 @@ func (m *TodosModel) HeaderView() string {
 	leftContent := lipgloss.JoinHorizontal(lipgloss.Center, leftTabs...)
 
 	isAllSelected := m.tuiService.CurrentView == service.AllPane
-	allTab := styling.GetStyledTagWithIndicator(4, m.translator.T("filter.all"), styling.Rosewater, isAllSelected, false, false)
+	allTab := styling.GetStyledTagWithIndicator(4, m.translator.T("filter.all"), theme.Rosewater, isAllSelected, false, false)
 
 	const minGap = 2
 	availableWidth := m.width - 2 // -2 for padding
