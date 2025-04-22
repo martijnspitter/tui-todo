@@ -236,6 +236,7 @@ func TestSaveTodo(t *testing.T) {
 
 // Tests for CreateTodo functionality
 func TestCreateTodo(t *testing.T) {
+	now := time.Now()
 	testCases := []struct {
 		name        string
 		title       string
@@ -244,6 +245,8 @@ func TestCreateTodo(t *testing.T) {
 		tags        []string
 		mockError   error
 		wantError   bool
+		dueDate     *time.Time
+		status      models.Status
 	}{
 		{
 			name:        "Successful creation",
@@ -253,6 +256,8 @@ func TestCreateTodo(t *testing.T) {
 			tags:        []string{"test", "todo"},
 			mockError:   nil,
 			wantError:   false,
+			dueDate:     &now,
+			status:      models.Doing,
 		},
 		{
 			name:        "Repository error",
@@ -262,6 +267,8 @@ func TestCreateTodo(t *testing.T) {
 			tags:        []string{},
 			mockError:   errors.New("db error"),
 			wantError:   true,
+			dueDate:     &now,
+			status:      models.Doing,
 		},
 	}
 
@@ -276,7 +283,7 @@ func TestCreateTodo(t *testing.T) {
 			svc := service.NewAppService(mockRepo)
 
 			// Call method under test
-			err := svc.CreateTodo(tc.title, tc.description, tc.priority, tc.tags)
+			err := svc.CreateTodo(tc.title, tc.description, tc.priority, tc.tags, tc.dueDate, tc.status)
 
 			// Check error expectation
 			if tc.wantError {
@@ -303,8 +310,16 @@ func TestCreateTodo(t *testing.T) {
 				if todo.Priority != tc.priority {
 					t.Errorf("Expected priority %v, got %v", tc.priority, todo.Priority)
 				}
-				if todo.Status != models.Open {
-					t.Errorf("Expected status Open, got %v", todo.Status)
+				if todo.DueDate == nil || !todo.DueDate.Equal(now) {
+					expected := now.Format(time.RFC3339)
+					actual := "nil"
+					if todo.DueDate != nil {
+						actual = todo.DueDate.Format(time.RFC3339)
+					}
+					t.Errorf("Expected due date %s, got %s", expected, actual)
+				}
+				if todo.Status != tc.status {
+					t.Errorf("Expected status %v, got %v", tc.status, todo.Status)
 				}
 
 				// Verify tags were added
