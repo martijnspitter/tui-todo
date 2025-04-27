@@ -69,3 +69,24 @@ changelog:
       - "^Merge pull request"
       - "^Merge branch"
   abbrev: 7 # Short commit hash length
+
+brews:
+  - name: tui-todo
+    repository:
+      owner: martijnspitter
+      name: homebrew-tui-todo
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: goreleaser@github.com
+    homepage: "https://github.com/martijnspitter/tui-todo"
+    description: "Terminal-based todo application with rich features"
+    caveats: |
+      Thank you for installing TUI Todo!
+      Run 'todo' to start the application.
+    license: "MIT" # Replace with your actual license
+    directory: Formula
+    install: |
+      bin.install "tui-todo" => "todo"  # This renames the binary when installing
+    test: |
+      system "#{bin}/todo", "--version"

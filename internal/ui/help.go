@@ -53,7 +53,7 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 	contextKeyMap := keys.NewHelpKeyMap(m.translator)
 
 	// Always show these keys regardless of context when not filtering
-	if !filterState.IsFilterActive && currentView != service.AddEditModal {
+	if !filterState.IsFilterActive && currentView != service.AddEditModal && currentView != service.AboutModal {
 		contextKeyMap.AddBindingInShort(baseKeyMap.Help)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Quit)
 	}
@@ -79,10 +79,11 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 			contextKeyMap.AddBindingInFull(baseKeyMap.New)
 			contextKeyMap.AddBindingInFull(baseKeyMap.Edit)
 
-			// Show these in full help or when relevant
 			contextKeyMap.AddBindingInFull(baseKeyMap.Delete)
 			contextKeyMap.AddBindingInFull(baseKeyMap.AdvanceStatus)
 			contextKeyMap.AddBindingInFull(baseKeyMap.Archive)
+
+			contextKeyMap.AddBindingInFull(baseKeyMap.About)
 		}
 
 		// Only show archived toggle in All filter mode
@@ -102,6 +103,9 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 	case service.ConfirmDeleteModal:
 		// Confirm delete shows minimal keys
 		contextKeyMap.AddBindingInFull(baseKeyMap.Select) // Confirm
+
+	case service.AboutModal:
+		contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
 	}
 
 	return contextKeyMap

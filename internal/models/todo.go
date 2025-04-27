@@ -1,6 +1,11 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/martijnspitter/tui-todo/internal/theme"
+)
 
 type Status int
 
@@ -14,6 +19,19 @@ func (s Status) String() string {
 		return "status.done"
 	default:
 		return "status.unknown"
+	}
+}
+
+func (s Status) Color() lipgloss.Color {
+	switch s {
+	case Open:
+		return theme.OpenStatusColor
+	case Doing:
+		return theme.DoingStatusColor
+	case Done:
+		return theme.DoneStatusColor
+	default:
+		return theme.OpenStatusColor
 	}
 }
 
@@ -39,6 +57,23 @@ func (p Priority) String() string {
 		return "priority.critical"
 	default:
 		return "priority.unknown"
+	}
+}
+
+func (p Priority) Color() lipgloss.Color {
+	switch p {
+	case Low:
+		return theme.LowPriorityColor
+	case Medium:
+		return theme.MediumPriorityColor
+	case High:
+		return theme.HighPriorityColor
+	case Major:
+		return theme.MajorPriorityColor
+	case Critical:
+		return theme.CriticalPriorityColor
+	default:
+		return theme.MediumPriorityColor
 	}
 }
 

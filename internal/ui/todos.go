@@ -14,6 +14,7 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
+	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
 type TodosModel struct {
@@ -171,6 +172,9 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						InfoToast),
 				)
 			}
+
+		case key.Matches(msg, m.tuiService.KeyMap.About):
+			return m, m.showAboutModalCmd()
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -234,9 +238,9 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.loadTodosCmd())
 		}
 
-	case UpdateAvailableMsg:
+	case UpdateCheckCompletedMsg:
 		if msg.ForceUpdate {
-			return m, m.showUpdateModalCmd(msg)
+			return m, m.showUpdateModalCmd()
 		}
 
 	case showModalMsg:
@@ -299,7 +303,7 @@ func (m *TodosModel) HeaderView() string {
 	leftContent := lipgloss.JoinHorizontal(lipgloss.Center, leftTabs...)
 
 	isAllSelected := m.tuiService.CurrentView == service.AllPane
-	allTab := styling.GetStyledTagWithIndicator(4, m.translator.T("filter.all"), styling.Rosewater, isAllSelected, false, false)
+	allTab := styling.GetStyledTagWithIndicator(4, m.translator.T("filter.all"), theme.Rosewater, isAllSelected, false, false)
 
 	const minGap = 2
 	availableWidth := m.width - 2 // -2 for padding
@@ -358,12 +362,8 @@ type modalCloseMsg struct {
 	reload bool
 }
 
-type UpdateAvailableMsg struct {
-	Version     string
-	URL         string
-	Notes       string
+type UpdateCheckCompletedMsg struct {
 	ForceUpdate bool
-	HasUpdate   bool
 }
 
 // ===========================================================================
@@ -441,13 +441,27 @@ func (m *TodosModel) toggleArchiveCmd(todoID int64, isArchived bool) tea.Cmd {
 	}
 }
 
-func (m *TodosModel) showUpdateModalCmd(msg UpdateAvailableMsg) tea.Cmd {
+func (m *TodosModel) showUpdateModalCmd() tea.Cmd {
 	return func() tea.Msg {
 		m.tuiService.SwitchToUpdateModalView()
 		m.modalComponent = NewUpdateModal(
-			msg.Notes,
 			m.width,
 			m.height,
+			m.service,
+			m.tuiService,
+			m.translator,
+		)
+		return showModalMsg{}
+	}
+}
+
+func (m *TodosModel) showAboutModalCmd() tea.Cmd {
+	return func() tea.Msg {
+		m.tuiService.SwitchToAboutModalView()
+		m.modalComponent = NewAboutModal(
+			m.width,
+			m.height,
+			m.service,
 			m.tuiService,
 			m.translator,
 		)

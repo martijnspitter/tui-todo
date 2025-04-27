@@ -10,35 +10,50 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/repository"
 )
 
+type UpdateInfo struct {
+	Version     string
+	URL         string
+	Notes       string
+	ForceUpdate bool
+	HasUpdate   bool
+	CheckedAt   time.Time
+}
+
 type AppService struct {
-	todoRepo repository.TodoRepository
+	todoRepo   repository.TodoRepository
+	updateInfo *UpdateInfo
 }
 
 func NewAppService(todoRepo repository.TodoRepository) *AppService {
 	return &AppService{
-		todoRepo: todoRepo,
+		todoRepo:   todoRepo,
+		updateInfo: &UpdateInfo{},
 	}
 }
 
+// ===========================================================================
+// Todo Methods
+// ===========================================================================
 func (s *AppService) SaveTodo(todo *models.Todo, tags []string) error {
 	// Service decides whether to create or update based on ID or other criteria
 	if todo.ID == 0 {
 		// Create new
-		return s.CreateTodo(todo.Title, todo.Description, todo.Priority, tags)
+		return s.CreateTodo(todo.Title, todo.Description, todo.Priority, tags, todo.DueDate, todo.Status)
 	} else {
 		// Update existing
 		return s.UpdateTodo(todo, tags)
 	}
 }
 
-func (s *AppService) CreateTodo(title, description string, priority models.Priority, tags []string) error {
+func (s *AppService) CreateTodo(title, description string, priority models.Priority, tags []string, dueDate *time.Time, status models.Status) error {
 	todo := &models.Todo{
 		Title:       title,
 		Description: description,
-		Status:      models.Open,
+		Status:      status,
 		Priority:    priority,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
+		DueDate:     dueDate,
 	}
 
 	err := s.todoRepo.Create(todo)
@@ -383,4 +398,30 @@ func (s *AppService) GetFilteredTodos(currentView ViewType, showArchived bool) (
 	}
 
 	return todos, nil
+}
+
+// ===========================================================================
+// Update Info Methods
+// ===========================================================================
+func (s *AppService) SetUpdateInfo(version, releaseUrl, releaseNotes string, forceUpdate, hasUpdate bool) {
+	s.updateInfo = &UpdateInfo{
+		Version:     version,
+		URL:         releaseUrl,
+		Notes:       releaseNotes,
+		ForceUpdate: forceUpdate,
+		HasUpdate:   hasUpdate,
+		CheckedAt:   time.Now(),
+	}
+}
+
+func (s *AppService) GetUpdateInfo() *UpdateInfo {
+	return s.updateInfo
+}
+
+func (s *AppService) HasUpdate() bool {
+	return s.updateInfo != nil && s.updateInfo.HasUpdate
+}
+
+func (s *AppService) NeedsForceUpdate() bool {
+	return s.updateInfo != nil && s.updateInfo.ForceUpdate
 }

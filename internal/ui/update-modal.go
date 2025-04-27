@@ -3,26 +3,26 @@ package ui
 import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
+	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
 type UpdateModal struct {
-	notes      string
 	width      int
 	height     int
+	appService *service.AppService
 	tuiService *service.TuiService
 	translator *i18n.TranslationService
 }
 
-func NewUpdateModal(notes string, width, height int, tuiService *service.TuiService, translator *i18n.TranslationService) *UpdateModal {
+func NewUpdateModal(width, height int, appService *service.AppService, tuiService *service.TuiService, translator *i18n.TranslationService) *UpdateModal {
 	return &UpdateModal{
-		notes:      notes,
 		width:      width,
 		height:     height,
+		appService: appService,
 		tuiService: tuiService,
 		translator: translator,
 	}
@@ -33,7 +33,6 @@ func (m *UpdateModal) Init() tea.Cmd {
 }
 
 func (m *UpdateModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		if key.Matches(
@@ -51,17 +50,18 @@ func (m *UpdateModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *UpdateModal) View() string {
+	updateInfo := m.appService.GetUpdateInfo()
 	modalStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		Padding(1, 2).
 		Width((m.width / 3) * 2).
-		BorderForeground(styling.Mauve)
+		BorderForeground(theme.Mauve)
 
 	title := styling.FocusedStyle.Render(m.translator.T("update_required"))
 	subtitle := styling.TextStyle.Render(m.translator.T("update_required_subtitle"))
 	spacer := ""
 
-	notes := renderReleaseNotes(m.notes)
+	notes := styling.RenderMarkdown(updateInfo.Notes)
 
 	content := lipgloss.JoinVertical(lipgloss.Left, title, spacer, subtitle, spacer, notes)
 
@@ -72,19 +72,4 @@ func (m *UpdateModal) View() string {
 		lipgloss.Center,
 		modalStyle.Render(content),
 	)
-}
-
-func renderReleaseNotes(markdown string) string {
-	r, _ := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
-		glamour.WithWordWrap(80),
-	)
-
-	rendered, err := r.Render(markdown)
-	if err != nil {
-		// Fallback to raw markdown if rendering fails
-		return markdown
-	}
-
-	return rendered
 }
