@@ -64,13 +64,17 @@ func main() {
 		}
 
 		if updateInfo != nil {
+			// Store the update info in the service
+			service.SetUpdateInfo(
+				updateInfo.Version,
+				updateInfo.ReleaseURL,
+				updateInfo.ReleaseNotes,
+				updateInfo.ForceUpdate,
+				updateInfo.HasUpdate,
+			)
 			// Send a message to the program to notify about the update
-			p.Send(ui.UpdateAvailableMsg{
-				Version:     updateInfo.Version,
-				URL:         updateInfo.ReleaseURL,
-				Notes:       updateInfo.ReleaseNotes,
+			p.Send(ui.UpdateCheckCompletedMsg{
 				ForceUpdate: updateInfo.ForceUpdate,
-				HasUpdate:   updateInfo.HasUpdate,
 			})
 		}
 	}()

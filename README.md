@@ -2,7 +2,38 @@
 
 A powerful, terminal-based todo application built with Go. Manage your tasks efficiently without leaving the command line.
 
+[![Go Version](https://img.shields.io/github/go-mod/go-version/martijnspitter/tui-todo)](https://golang.org/)
+[![Release](https://img.shields.io/github/v/release/martijnspitter/tui-todo)](https://github.com/martijnspitter/tui-todo/releases/latest)
+[![License](https://img.shields.io/github/license/martijnspitter/tui-todo)](LICENSE)
+
 ![Todo TUI Screenshot](docs/images/screenshot.png)
+
+## Table of Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+  - [macOS and Linux](#macos-and-linux)
+  - [Windows](#windows)
+- [Keyboard Shortcuts](#keyboard-shortcuts)
+  - [Navigation](#navigation)
+  - [Task Management](#task-management)
+  - [Views and Filtering](#views-and-filtering)
+  - [Application](#application)
+- [Configuration](#configuration)
+- [Screenshots](#screenshots)
+- [Development](#development)
+  - [Building from Source](#building-from-source)
+  - [Running Tests](#running-tests)
+  - [Development Setup](#development-setup)
+- [Collaboration](#collaboration)
+  - [Development Workflow](#development-workflow)
+  - [Pull Request Guidelines](#pull-request-guidelines)
+  - [Code Style](#code-style)
+  - [Issue Reporting](#issue-reporting)
+- [Support and Community](#support-and-community)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
 
 ## Features
 
@@ -12,79 +43,186 @@ A powerful, terminal-based todo application built with Go. Manage your tasks eff
 - 🚩 Priority levels (Low, Medium, High)
 - 📅 Due date support
 - 🔍 Filtering and searching capabilities
-- ⌨️ Keyboard-driven interfaceo
+- ⌨️ Keyboard-driven interface
+
+## Requirements
+
+- Terminal with support for TUI applications
 
 ## Installation
 
-### macOS and Linux
+### macOS
+
+```bash
+ brew tap martijnspitter/tui-todo
+ brew install tui-todo
+```
+
+### Linux
+
+#### Option 1: Manual Installation
 
 ```bash
 # Download the appropriate version for your system
-curl -L -o tui-todo.tar.gz https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m).tar.gz
+curl -L -o tui-todo.tar.gz https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo_Linux_$(if [ "$(uname -m)" = "x86_64" ]; then echo "x86_64"; else echo "$(uname -m)"; fi).tar.gz
 
-# Extract
+# Extract the archive
 tar -xzf tui-todo.tar.gz
 
-# Run installer
-./install.sh
+# Move the binary to a directory in your PATH
+sudo mv tui-todo /usr/local/bin/todo
+
+# Make it executable
+sudo chmod +x /usr/local/bin/todo
+
+# Verify installation
+todo --version
 
 # Clean up
-rm tui-todo.tar.gz tui-todo install.sh
+rm -f tui-todo.tar.gz
+```
+
+#### Option 2: Using Homebrew on Linux
+
+```bash
+# If you have Homebrew for Linux installed
+brew tap martijnspitter/tui-todo
+brew install tui-todo
 ```
 
 ### Windows
 
-1. Download the [latest Windows release](https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo-windows-amd64.zip)
-2. Extract the ZIP file
-3. Right-click on `install.ps1` and select "Run with PowerShell"
-4. Open a new PowerShell window and run `tui-todo`
+```powershell
+# Download the latest release (Run in PowerShell)
+$url = "https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo_Windows_x86_64.zip"
+$output = "$env:TEMP\tui-todo.zip"
+Invoke-WebRequest -Uri $url -OutFile $output
 
-## Installation
+# Extract to a permanent location
+$installDir = "$env:LOCALAPPDATA\Programs\tui-todo"
+if (!(Test-Path $installDir)) { New-Item -ItemType Directory -Path $installDir | Out-Null }
+Expand-Archive -Path $output -DestinationPath $installDir -Force
 
-### macOS and Linux
+# Rename the binary
+Rename-Item -Path "$installDir\tui-todo.exe" -NewName "todo.exe" -Force
 
-```bash
-# Download the appropriate version for your system
-curl -L -o tui-todo.tar.gz https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m).tar.gz
-
-# Extract
-tar -xzf tui-todo.tar.gz
-
-# Run installer
-./install.sh
+# Add to PATH (requires admin if you want to add to system PATH)
+$userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+if ($userPath -notlike "*$installDir*") {
+    [Environment]::SetEnvironmentVariable("Path", "$userPath;$installDir", "User")
+    Write-Host "Added to PATH. Please restart your terminal for changes to take effect."
+}
 
 # Clean up
-rm tui-todo.tar.gz todo install.sh
+Remove-Item $output
 
-# Now you can use the app from anywhere
-todo
+Write-Host "Installation complete! Type 'todo' in a new terminal window to start the application."
 ```
 
-### Windows
+## Keyboard Shortcuts
 
-1. Download the [latest Windows release](https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo-windows-amd64.zip)
-2. Extract the ZIP file
-3. Right-click on `install.ps1` and select "Run with PowerShell"
-4. Open a new PowerShell window and run `todo`
+### Navigation
 
-## Usage
+| Key              | Action              |
+| ---------------- | ------------------- |
+| Tab / Right      | Next field/item     |
+| Shift+Tab / Left | Previous field/item |
+| Up / k           | Move up             |
+| Down / j         | Move down           |
+| g / Home         | Go to first item    |
+| G / End          | Go to last item     |
+| Enter            | Select/Confirm      |
+| Esc              | Go back/Cancel      |
 
-| Key               | Action                   |
-| ----------------- | ------------------------ |
-| Tab/Right         | Next field/item          |
-| Shift+Tab/Left    | Previous field/item      |
-| Enter             | Select/Confirm           |
-| Esc               | Go back/Cancel           |
-| Ctrl+C            | Quit application         |
-| Ctrl+N            | Create new todo          |
-| Ctrl+E            | Edit selected todo       |
-| Ctrl+D            | Delete selected todo     |
-| Ctrl+Space/Ctrl+S | Advance todo status      |
-| 1                 | Switch to Open todos     |
-| 2                 | Switch to Doing todos    |
-| 3                 | Switch to Done todos     |
-| 4                 | Switch to Archived todos |
-| 5                 | Switch to New todo pane  |
+### Task Management
+
+| Key    | Action                 |
+| ------ | ---------------------- |
+| Ctrl+N | Create new todo        |
+| Ctrl+E | Edit selected todo     |
+| Ctrl+D | Delete selected todo   |
+| Ctrl+S | Advance todo status    |
+| Ctrl+A | Archive/Unarchive todo |
+
+### Views and Filtering
+
+| Key | Action                      |
+| --- | --------------------------- |
+| 1   | Switch to Open todos        |
+| 2   | Switch to Doing todos       |
+| 3   | Switch to Done todos        |
+| 4   | Switch to Archived todos    |
+| a   | Toggle archived todos       |
+| /   | Filter by title/description |
+| t   | Filter by tag               |
+
+### Application
+
+| Key    | Action             |
+| ------ | ------------------ |
+| Ctrl+C | Quit application   |
+| ?      | Toggle help view   |
+| i      | Open about section |
+
+## Configuration
+
+### Data Storage
+
+Todo TUI stores your todos in a SQLite database located at
+
+- Linux:
+  - `$XDG_DATA_HOME/tui-todo/todo.sql` (if XDG_DATA_HOME is set)
+  - `~/.local/share/tui-todo/todo.sql` (default)
+- macOS: `~/Library/Application Support/tui-todo/todo.sql`
+- Windows:
+  - `%APPDATA%\tui-todo\todo.sql` (if APPDATA is set)
+  - `~\AppData\Roaming\tui-todo\todo.sql` (default)
+
+## Screenshots
+
+![Task List View](docs/images/task-list.png)
+_Main task view with different status tabs_
+
+![Task Edit View](docs/images/task-edit.png)
+_Editing a task with tags and due date_
+
+## Development
+
+### Building from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/martijnspitter/tui-todo.git
+cd tui-todo
+
+# Build the application
+go build -o todo ./cmd/tui-todo
+
+# Run the application
+./todo
+```
+
+### Running Tests
+
+```bash
+go test -v ./...
+```
+
+### Development Setup
+
+To set up a development environment:
+
+```bash
+# Clone the repository
+git clone https://github.com/martijnspitter/tui-todo.git
+cd tui-todo
+
+# Install dependencies
+go mod download
+
+# Run the application in development mode
+go run ./cmd/tui-todo/main.go
+```
 
 ## Collaboration
 
@@ -152,57 +290,27 @@ Found a bug or have a feature request? Please [create an issue](https://github.c
 - Expected vs. actual behavior (for bugs)
 - Any relevant screenshots or logs
 
-### Building from Source
+## Support and Community
 
-```bash
-# Clone the repository
-git clone https://github.com/martijnspitter/tui-todo.git
-cd tui-todo
+- **Issues**: Report bugs or request features through [GitHub Issues](https://github.com/martijnspitter/tui-todo/issues)
+- **Discussions**: Join our [GitHub Discussions](https://github.com/martijnspitter/tui-todo/discussions) for questions and conversations
+- **Updates**: Follow the project on GitHub to receive notifications about updates and new releases
 
-# Build the application
-go build -o todo ./cmd/tui-todo
+## Troubleshooting
 
-# Run the application
-./todo
-```
+### Common Issues
 
-### Running Tests
+**Issue**: Application displays incorrectly with broken characters or formatting
+**Solution**: Ensure your terminal supports TUI applications and try setting `TERM=xterm-256color` environment variable
 
-```bash
-go test -v ./...
-```
+**Issue**: "Command not found" error after installation
+**Solution**: Make sure the installation directory is in your PATH environment variable. You might need to restart your terminal.
 
-### Development Setup
+**Issue**: Database access errors
+**Solution**: Check that the application has write permissions to the directory where it stores data
 
-To set up a development environment:
-
-```bash
-# Clone the repository
-git clone https://github.com/martijnspitter/tui-todo.git
-cd tui-todo
-
-# Install dependencies
-go mod download
-
-# Run the application in development mode
-go run ./cmd/tui-todo/main.go
-```
-
-## Configuration
-
-Todo TUI stores its data in:
-
-- Linux: `~/.local/share/tui-todo/todo.sql`
-- macOS: `~/Library/Application Support/tui-todo/todo.sql`
-- Windows: `%APPDATA%\tui-todo\todo.sql`
-
-## Screenshots
-
-![Task List View](docs/images/task-list.png)
-_Main task view with different status tabs_
-
-![Task Edit View](docs/images/task-edit.png)
-_Editing a task with tags and due date_
+**Issue**: Keyboard shortcuts not working as expected
+**Solution**: Some terminal emulators might capture certain key combinations. Try using alternative key bindings or configure your terminal to pass these key combinations through.
 
 ## License
 

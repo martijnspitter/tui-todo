@@ -7,7 +7,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/service"
-	"github.com/martijnspitter/tui-todo/internal/styling"
+	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
 type StatusBar struct {
@@ -16,8 +16,6 @@ type StatusBar struct {
 	translator *i18n.TranslationService
 	width      int
 	height     int
-	Version    string
-	HasUpdate  bool
 }
 
 func NewStatusBar(service *service.AppService, tuiService *service.TuiService, translator *i18n.TranslationService) *StatusBar {
@@ -25,7 +23,6 @@ func NewStatusBar(service *service.AppService, tuiService *service.TuiService, t
 		service:    service,
 		tuiService: tuiService,
 		translator: translator,
-		Version:    "",
 	}
 }
 
@@ -38,31 +35,30 @@ func (m *StatusBar) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-	case UpdateAvailableMsg:
-		m.Version = msg.Version
-		m.HasUpdate = msg.HasUpdate
 	}
 
 	return m, nil
 }
 
 func (m *StatusBar) View() string {
+	updateInfo := m.service.GetUpdateInfo()
+
 	content := ""
 
 	// Base style for the status bar
 	statusBarStyle := lipgloss.NewStyle().
-		Background(styling.BackgroundColor).
-		Foreground(styling.TextColor).
+		Background(theme.BackgroundColor).
+		Foreground(theme.TextColor).
 		Width(m.width)
 
 	versionStyle := lipgloss.NewStyle().
-		Background(styling.BackgroundColor).
-		Foreground(styling.TextColor)
+		Background(theme.BackgroundColor).
+		Foreground(theme.TextColor)
 
 	// Filter option style
 	filterOptionStyle := lipgloss.NewStyle().
-		Background(styling.BackgroundColor).
-		Foreground(styling.Lavender).
+		Background(theme.BackgroundColor).
+		Foreground(theme.Lavender).
 		PaddingLeft(1).
 		PaddingRight(1)
 
@@ -96,14 +92,14 @@ func (m *StatusBar) View() string {
 	}
 
 	version := ""
-	if m.HasUpdate {
+	if updateInfo.HasUpdate {
 		version = versionStyle.Render(
 			" 🔔",
 			m.translator.T("update_available"),
 		)
-	} else if m.Version != "" {
+	} else if updateInfo.Version != "" {
 		version = versionStyle.Render(
-			m.translator.Tf("version", map[string]interface{}{"Version": m.Version}),
+			m.translator.Tf("version", map[string]interface{}{"Version": updateInfo.Version}),
 		)
 	}
 
