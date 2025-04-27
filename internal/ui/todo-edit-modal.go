@@ -15,6 +15,7 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
+	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
 type editState int
@@ -169,7 +170,7 @@ func (m *TodoEditModal) View() string {
 		Border(lipgloss.RoundedBorder()).
 		Padding(1, 2).
 		Width(m.width / 2).
-		BorderForeground(styling.Mauve)
+		BorderForeground(theme.Mauve)
 
 	// Priority display
 	var priorityTabs []string

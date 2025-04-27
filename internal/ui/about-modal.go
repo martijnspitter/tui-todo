@@ -7,6 +7,7 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
+	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
 const Logo = `
@@ -67,7 +68,7 @@ func (m *AboutModal) View() string {
 		Border(lipgloss.RoundedBorder()).
 		Padding(1, 2).
 		Width((m.width / 3) * 2).
-		BorderForeground(styling.Mauve)
+		BorderForeground(theme.Mauve)
 
 	title := styling.FocusedStyle.Render(m.translator.T("about_title"))
 	subtitle := styling.TextStyle.Render(m.translator.T("about_subtitle"))

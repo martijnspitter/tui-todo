@@ -38,21 +38,22 @@ func (s *AppService) SaveTodo(todo *models.Todo, tags []string) error {
 	// Service decides whether to create or update based on ID or other criteria
 	if todo.ID == 0 {
 		// Create new
-		return s.CreateTodo(todo.Title, todo.Description, todo.Priority, tags)
+		return s.CreateTodo(todo.Title, todo.Description, todo.Priority, tags, todo.DueDate, todo.Status)
 	} else {
 		// Update existing
 		return s.UpdateTodo(todo, tags)
 	}
 }
 
-func (s *AppService) CreateTodo(title, description string, priority models.Priority, tags []string) error {
+func (s *AppService) CreateTodo(title, description string, priority models.Priority, tags []string, dueDate *time.Time, status models.Status) error {
 	todo := &models.Todo{
 		Title:       title,
 		Description: description,
-		Status:      models.Open,
+		Status:      status,
 		Priority:    priority,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
+		DueDate:     dueDate,
 	}
 
 	err := s.todoRepo.Create(todo)

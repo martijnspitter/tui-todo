@@ -7,6 +7,7 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
+	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
 type UpdateModal struct {
@@ -54,7 +55,7 @@ func (m *UpdateModal) View() string {
 		Border(lipgloss.RoundedBorder()).
 		Padding(1, 2).
 		Width((m.width / 3) * 2).
-		BorderForeground(styling.Mauve)
+		BorderForeground(theme.Mauve)
 
 	title := styling.FocusedStyle.Render(m.translator.T("update_required"))
 	subtitle := styling.TextStyle.Render(m.translator.T("update_required_subtitle"))
