@@ -27,6 +27,7 @@ type TodosModel struct {
 	quitting       bool
 	modalComponent tea.Model
 	footer         tea.Model
+	header         tea.Model
 }
 
 func NewTodosModel(appService *service.AppService, translationService *i18n.TranslationService) *TodosModel {
@@ -42,6 +43,7 @@ func NewTodosModel(appService *service.AppService, translationService *i18n.Tran
 	todoList.SetFilteringEnabled(true)
 
 	footer := NewFooterModel(appService, tuiService, translationService)
+	header := NewHeaderModel(tuiService, translationService)
 
 	// Create model
 	m := &TodosModel{
@@ -50,6 +52,7 @@ func NewTodosModel(appService *service.AppService, translationService *i18n.Tran
 		translator: translationService,
 		list:       todoList,
 		footer:     footer,
+		header:     header,
 	}
 
 	todos, err := appService.GetActiveTodos()
@@ -253,6 +256,9 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.footer, cmd = m.footer.Update(msg)
 	cmds = append(cmds, cmd)
 
+	m.header, cmd = m.header.Update(msg)
+	cmds = append(cmds, cmd)
+
 	if m.tuiService.ShouldShowModal() && m.modalComponent != nil {
 		m.modalComponent, cmd = m.modalComponent.Update(msg)
 		cmds = append(cmds, cmd)
@@ -269,7 +275,7 @@ func (m *TodosModel) View() string {
 		return m.modalComponent.View()
 	}
 
-	header := m.HeaderView()
+	header := m.header.View()
 	footer := m.footer.View()
 
 	headerHeight := lipgloss.Height(header)
