@@ -80,11 +80,13 @@ brews:
       name: goreleaserbot
       email: goreleaser@github.com
     homepage: "https://github.com/martijnspitter/tui-todo"
-    description: "Terminal-based todo application with rich features"
+    description: |
+      A feature-rich terminal-based todo application built with Go.
+      Organize tasks with tags, priorities, and due dates without leaving your terminal.
     caveats: |
       Thank you for installing TUI Todo!
       Run 'todo' to start the application.
-    license: "MIT" # Replace with your actual license
+    license: "MIT"
     directory: Formula
     install: |
       bin.install "tui-todo" => "todo"  # This renames the binary when installing
@@ -101,7 +103,7 @@ nfpms:
     builds:
       - tui-todo
 
-    # Rename the binary during installation (similar to Homebrew)
+    # Rename the binary during installation
     contents:
       - src: "tui-todo"
         dst: "/usr/local/bin/todo"
@@ -109,11 +111,12 @@ nfpms:
     # Package details
     vendor: Martijn Spitter
     homepage: https://github.com/martijnspitter/tui-todo
-    maintainer: Martijn Spitter info@martijnspitter.nl
-    description: Terminal-based todo application with rich features
+    maintainer: Martijn Spitter <info@martijnspitter.nl>
+    description: |
+      A feature-rich terminal-based todo application built with Go.
+      Organize tasks with tags, priorities, and due dates without leaving your terminal.
     license: MIT
-
-    # Dependencies (usually minimal for Go apps)
+    # Dependencies (minimal for Go apps)
     dependencies:
       - libc6
 
@@ -128,17 +131,13 @@ nfpms:
       lintian_overrides:
         - statically-linked-binary
 
-    # Package recommends
-    recommends:
-      - terminal-with-utf8-support
-
 snapcrafts:
   - id: tui-todo
     name: tui-todo
     summary: Terminal-based todo application
     description: |
-      A powerful terminal-based todo application built with Go.
-      Manage your tasks efficiently without leaving the command line.
+      A feature-rich terminal-based todo application built with Go.
+      Organize tasks with tags, priorities, and due dates without leaving your terminal.
     grade: stable
     confinement: strict
     apps:

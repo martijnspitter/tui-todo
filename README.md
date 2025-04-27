@@ -60,7 +60,58 @@ A powerful, terminal-based todo application built with Go. Manage your tasks eff
 
 ### Linux
 
-#### Option 1: Manual Installation
+#### Option 1: Debian/Ubuntu (DEB package)
+
+```bash
+# Download the latest .deb package
+curl -L -o tui-todo.deb https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo_Linux_x86_64.deb
+
+# Install the package
+sudo dpkg -i tui-todo.deb
+# Install dependencies if needed
+sudo apt-get install -f
+
+# Run the application
+todo
+```
+
+#### Option 2: Fedora/RHEL/CentOS (RPM package)
+
+```bash
+# Download the latest .rpm package
+curl -L -o tui-todo.rpm https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo_Linux_x86_64.rpm
+
+# Install the package
+sudo rpm -i tui-todo.rpm
+
+# Run the application
+todo
+```
+
+#### Option 3: Alpine Linux
+
+```bash
+# Download the latest .apk package
+curl -L -o tui-todo.apk https://github.com/martijnspitter/tui-todo/releases/latest/download/tui-todo_Linux_x86_64.apk
+
+# Install the package
+sudo apk add --allow-untrusted tui-todo.apk
+
+# Run the application
+todo
+```
+
+#### Option 4: Snap Package
+
+```bash
+# Install directly from the Snap Store
+sudo snap install tui-todo
+
+# Run the application
+todo
+```
+
+#### Option 5: Manual Installation
 
 ```bash
 # Download the appropriate version for your system
@@ -80,14 +131,6 @@ todo --version
 
 # Clean up
 rm -f tui-todo.tar.gz
-```
-
-#### Option 2: Using Homebrew on Linux
-
-```bash
-# If you have Homebrew for Linux installed
-brew tap martijnspitter/tui-todo
-brew install tui-todo
 ```
 
 ### Windows
