@@ -42,6 +42,7 @@
   "filter.archived": "Archived",
   "filter.by_tag": "Filtering by tag",
   "filter.by_title": "Filtering by title & description",
+  "filter.today": "Today",
 
   "footer.hide_archived": "[ ] Archived",
   "footer.show_archived": "[✓] Archived",
@@ -70,7 +71,7 @@
   "help.ctrl_a": "Archive/Unarchive",
   "help.right_tab": "Go next",
   "help.left_shift_tab": "Go previous",
-  "help.1_4": "Select Pane",
+  "help.pane": "Select Pane",
   "help.enter": "Select",
   "help.ctrl_c_esc": "Close application",
   "help.a": "Toggle archived todos",

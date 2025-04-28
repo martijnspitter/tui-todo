@@ -46,6 +46,10 @@ func (m *HeaderModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *HeaderModel) View() string {
 	var leftTabs []string
 
+	isTodaySelected := m.tuiService.CurrentView == service.TodayPane
+	todayTab := styling.GetStyledTagWithIndicator(0, m.translator.T("filter.today"), theme.Lavender, isTodaySelected, false, false)
+	leftTabs = append(leftTabs, todayTab)
+
 	for status := models.Open; status <= models.Done; status++ {
 		isSelected := int(m.tuiService.CurrentView) == int(status)
 		translatedStatus := m.translator.T(status.String())

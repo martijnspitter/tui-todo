@@ -29,6 +29,46 @@ type TodoRepository interface {
 type Filter func() (string, []any)
 
 // Common filters you can use
+func DueTodayOrPrioAboveHighFilter() Filter {
+	return func() (string, []any) {
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		tomorrow := today.Add(24 * time.Hour)
+
+		// Only include:
+		// 1. Tasks due today (not completed), OR
+		// 2. Tasks that are overdue (not completed), OR
+		// 3. Tasks with Major or Critical priority (not completed)
+		return "((" +
+				// Due today
+				"(due_date IS NOT NULL AND due_date >= ? AND due_date < ?)" +
+				" OR " +
+				// Overdue
+				"(due_date IS NOT NULL AND due_date < ?)" +
+				" OR " +
+				// High priority (without future due date)
+				"(priority >= ? AND (due_date IS NULL OR due_date < ?))" +
+				") AND status != ?)",
+			[]interface{}{
+				today, tomorrow, // For due today
+				today,        // For overdue
+				models.Major, // For high priority
+				tomorrow,     // Exclude future high priority tasks
+				models.Done,  // Exclude completed tasks
+			}
+	}
+}
+
+func CompletedTodayFilter() Filter {
+	return func() (string, []any) {
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+		return "status = ? AND updated_at >= ?",
+			[]interface{}{models.Done, today}
+	}
+}
+
 func StatusFilter(status models.Status) Filter {
 	return func() (string, []any) {
 		return "status = ?", []any{status}
