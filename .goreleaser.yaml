@@ -95,20 +95,17 @@ brews:
 
 nfpms:
   - id: tui-todo-packages
-    package_name: tui-todo
-    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Arch }}"
+    package_name: todo
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
-    # The binary will be installed as "todo"
-    bindir: /usr/local/bin
-    builds:
+    # Reference the build ID
+    ids:
       - tui-todo
 
-    # Rename the binary during installation
-    contents:
-      - src: "tui-todo"
-        dst: "/usr/local/bin/todo"
+    # Standard installation path
+    bindir: /usr/bin
 
-    # Package details
+    # Package metadata
     vendor: Martijn Spitter
     homepage: https://github.com/martijnspitter/tui-todo
     maintainer: Martijn Spitter <info@martijnspitter.nl>
@@ -116,15 +113,22 @@ nfpms:
       A feature-rich terminal-based todo application built with Go.
       Organize tasks with tags, priorities, and due dates without leaving your terminal.
     license: MIT
-    # Dependencies (minimal for Go apps)
+    # Dependencies
     dependencies:
       - libc6
 
-    # Supported formats
+    # Package formats
     formats:
       - deb
       - rpm
       - apk
+
+    # Contents section allows you to add extra files or symlinks
+    contents:
+      # Create a symlink so the command is available as 'todo'
+      - src: /usr/bin/tui-todo
+        dst: /usr/bin/todo
+        type: symlink
 
     # .deb specific
     deb:
@@ -133,14 +137,46 @@ nfpms:
 
 snapcrafts:
   - id: tui-todo
-    name: tui-todo
+    name: todo
+    title: TUI Todo
     summary: Terminal-based todo application
     description: |
       A feature-rich terminal-based todo application built with Go.
       Organize tasks with tags, priorities, and due dates without leaving your terminal.
+
+    # Build metadata
     grade: stable
     confinement: strict
+    base: core20
+
+    # License information
+    license: MIT
+
+    # Publishing settings
+    publish: true
+    channel_templates:
+      - edge
+      - beta
+      - candidate
+      - stable
+
+    # Reference the build
+    ids:
+      - tui-todo
+
+    # App configuration
     apps:
-      tui-todo:
-        command: todo
-        plugs: [home, network, desktop-legacy]
+      todo:
+        command: tui-todo
+        plugs:
+          - home
+          - network
+          - personal-files
+
+    # Additional permissions for accessing user files
+    plugs:
+      personal-files:
+        read:
+          - $HOME/.config/tui-todo
+        write:
+          - $HOME/.config/tui-todo

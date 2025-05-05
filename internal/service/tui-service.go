@@ -7,7 +7,8 @@ import (
 type ViewType int
 
 const (
-	OpenPane ViewType = iota
+	TodayPane ViewType = iota + 1
+	OpenPane
 	DoingPane
 	DonePane
 	AllPane
@@ -41,7 +42,7 @@ const (
 func NewTuiService() *TuiService {
 	return &TuiService{
 		KeyMap:      keys.DefaultKeyMap(),
-		CurrentView: DoingPane,
+		CurrentView: TodayPane,
 		FilterState: FilterState{
 			IncludeArchived: false,
 			IsFilterActive:  false,
@@ -53,12 +54,14 @@ func NewTuiService() *TuiService {
 func (t *TuiService) SwitchPane(key string) {
 	switch key {
 	case "1":
-		t.CurrentView = OpenPane
+		t.CurrentView = TodayPane
 	case "2":
-		t.CurrentView = DoingPane
+		t.CurrentView = OpenPane
 	case "3":
-		t.CurrentView = DonePane
+		t.CurrentView = DoingPane
 	case "4":
+		t.CurrentView = DonePane
+	case "5":
 		t.CurrentView = AllPane
 	}
 }
@@ -124,7 +127,7 @@ func (t *TuiService) ToggleArchivedInAllView() {
 }
 
 func (t *TuiService) isPrevViewATab() bool {
-	return t.PrevView == OpenPane || t.PrevView == DoingPane || t.PrevView == DonePane || t.PrevView == AllPane
+	return t.PrevView == TodayPane || t.PrevView == OpenPane || t.PrevView == DoingPane || t.PrevView == DonePane || t.PrevView == AllPane
 }
 
 var (

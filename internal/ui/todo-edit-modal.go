@@ -350,7 +350,7 @@ func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 			dueDate, err := time.Parse("2006-01-02 15:04", dueDateStr)
 			if err != nil {
 				log.Error("Invalid due date", err)
-				return todoErrorMsg{err: fmt.Errorf(m.translator.T("error.due_date_invalid"))}
+				return TodoErrorMsg{err: fmt.Errorf(m.translator.T("error.due_date_invalid"))}
 			}
 			m.todo.DueDate = &dueDate
 		}
@@ -367,7 +367,7 @@ func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 
 		err := m.appService.SaveTodo(m.todo, tags)
 		if err != nil {
-			return todoErrorMsg{err: err}
+			return TodoErrorMsg{err: err}
 		}
 
 		// Close modal and reload todos
