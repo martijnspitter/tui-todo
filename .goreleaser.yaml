@@ -98,15 +98,11 @@ nfpms:
     package_name: tui-todo
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Arch }}"
 
-    # The binary will be installed as "todo"
-    bindir: /usr/local/bin
-    builds:
-      - tui-todo
-
-    # Rename the binary during installation
     contents:
-      - src: "tui-todo"
+      - src: "{{ .Env.PWD }}/dist/{{ .Target }}/{{ .Name }}"
         dst: "/usr/local/bin/todo"
+        file_info:
+          mode: 0755
 
     # Package details
     vendor: Martijn Spitter
