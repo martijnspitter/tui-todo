@@ -236,10 +236,6 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case showModalMsg:
 		return m, tea.WindowSize()
-
-	case GetTodayDataMsg:
-		m.today, cmd = m.today.Update(msg)
-		cmds = append(cmds, cmd)
 	}
 
 	m.list, cmd = m.list.Update(msg)
