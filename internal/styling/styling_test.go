@@ -80,7 +80,7 @@ func TestGetStyledStatus(t *testing.T) {
 
 			// Check for number indication if not omitted
 			if !tt.omitNumber {
-				expectedNum := int(tt.status) + 1
+				expectedNum := int(tt.status) + 2
 				if !strings.Contains(result, string(rune('0'+expectedNum))) {
 					t.Errorf("Expected status number %d in output", expectedNum)
 				}

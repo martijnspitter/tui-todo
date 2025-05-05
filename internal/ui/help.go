@@ -106,6 +106,17 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 
 	case service.AboutModal:
 		contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
+
+	case service.TodayPane:
+		contextKeyMap.AddBindingInShort(baseKeyMap.Up)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Down)
+		contextKeyMap.AddBindingInShort(baseKeyMap.PageUp)
+		contextKeyMap.AddBindingInShort(baseKeyMap.PageDown)
+
+		contextKeyMap.AddBindingInFull(baseKeyMap.Up)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Down)
+		contextKeyMap.AddBindingInFull(baseKeyMap.PageUp)
+		contextKeyMap.AddBindingInFull(baseKeyMap.PageDown)
 	}
 
 	return contextKeyMap

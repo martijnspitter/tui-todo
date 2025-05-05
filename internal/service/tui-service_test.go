@@ -11,7 +11,7 @@ func TestNewTuiService(t *testing.T) {
 	svc := service.NewTuiService()
 
 	// Check default state
-	if svc.CurrentView != service.DoingPane {
+	if svc.CurrentView != service.TodayPane {
 		t.Errorf("Expected default view to be DoingPane, got %v", svc.CurrentView)
 	}
 
@@ -41,23 +41,28 @@ func TestSwitchPane(t *testing.T) {
 		expectedView service.ViewType
 	}{
 		{
-			name:         "Switch to Open pane",
+			name:         "Switch to Today pane",
 			key:          "1",
+			expectedView: service.TodayPane,
+		},
+		{
+			name:         "Switch to Open pane",
+			key:          "2",
 			expectedView: service.OpenPane,
 		},
 		{
 			name:         "Switch to Doing pane",
-			key:          "2",
+			key:          "3",
 			expectedView: service.DoingPane,
 		},
 		{
 			name:         "Switch to Done pane",
-			key:          "3",
+			key:          "4",
 			expectedView: service.DonePane,
 		},
 		{
 			name:         "Switch to All pane",
-			key:          "4",
+			key:          "5",
 			expectedView: service.AllPane,
 		},
 		{

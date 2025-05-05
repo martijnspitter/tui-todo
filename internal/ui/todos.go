@@ -2,19 +2,16 @@ package ui
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
-	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
 type TodosModel struct {
@@ -27,6 +24,8 @@ type TodosModel struct {
 	quitting       bool
 	modalComponent tea.Model
 	footer         tea.Model
+	header         tea.Model
+	today          tea.Model
 }
 
 func NewTodosModel(appService *service.AppService, translationService *i18n.TranslationService) *TodosModel {
@@ -42,6 +41,8 @@ func NewTodosModel(appService *service.AppService, translationService *i18n.Tran
 	todoList.SetFilteringEnabled(true)
 
 	footer := NewFooterModel(appService, tuiService, translationService)
+	header := NewHeaderModel(tuiService, translationService)
+	today := NewTodayModel(appService, tuiService, translationService)
 
 	// Create model
 	m := &TodosModel{
@@ -50,19 +51,10 @@ func NewTodosModel(appService *service.AppService, translationService *i18n.Tran
 		translator: translationService,
 		list:       todoList,
 		footer:     footer,
+		header:     header,
+		today:      today,
 	}
 
-	todos, err := appService.GetActiveTodos()
-
-	if err == nil && len(todos) > 0 {
-		items := make([]list.Item, len(todos))
-		for i, todo := range todos {
-			items[i] = &TodoItem{todo: todo, tuiService: tuiService}
-		}
-		m.list.SetItems(items)
-	} else if err != nil {
-		log.Error("Error pre-loading todos", "error", err)
-	}
 	return m
 }
 
@@ -75,6 +67,8 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
+	case InitMsg:
+		return m, m.loadTodosCmd()
 	case tea.KeyMsg:
 		if m.tuiService.ShouldShowModal() {
 			// Handle modal
@@ -124,11 +118,8 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, m.tuiService.KeyMap.SwitchPane):
 			if !m.tuiService.ShouldShowModal() {
-				switch key := msg.String(); key {
-				case "1", "2", "3", "4":
-					m.tuiService.SwitchPane(key)
-					return m, m.loadTodosCmd()
-				}
+				m.tuiService.SwitchPane(msg.String())
+				return m, m.loadTodosCmd()
 			}
 
 		case key.Matches(msg, m.tuiService.KeyMap.AdvanceStatus):
@@ -229,7 +220,7 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.translator.T(fmt.Sprintf("toast.%s", msg.action)),
 			SuccessToast))
 
-	case todoErrorMsg:
+	case TodoErrorMsg:
 		cmds = append(cmds, ShowDefaultToast(m.translator.T(msg.Error()), ErrorToast))
 
 	case modalCloseMsg:
@@ -253,6 +244,12 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.footer, cmd = m.footer.Update(msg)
 	cmds = append(cmds, cmd)
 
+	m.header, cmd = m.header.Update(msg)
+	cmds = append(cmds, cmd)
+
+	m.today, cmd = m.today.Update(msg)
+	cmds = append(cmds, cmd)
+
 	if m.tuiService.ShouldShowModal() && m.modalComponent != nil {
 		m.modalComponent, cmd = m.modalComponent.Update(msg)
 		cmds = append(cmds, cmd)
@@ -269,7 +266,7 @@ func (m *TodosModel) View() string {
 		return m.modalComponent.View()
 	}
 
-	header := m.HeaderView()
+	header := m.header.View()
 	footer := m.footer.View()
 
 	headerHeight := lipgloss.Height(header)
@@ -279,6 +276,9 @@ func (m *TodosModel) View() string {
 
 	// Main list
 	listView := lipgloss.NewStyle().Width(m.width - 2).Padding(styling.Padding).Render(m.list.View())
+	if m.tuiService.CurrentView == service.TodayPane {
+		listView = m.today.View()
+	}
 
 	padding := lipgloss.NewStyle().Padding(1, 1)
 	// Combine all views
@@ -288,36 +288,6 @@ func (m *TodosModel) View() string {
 		listView,
 		footer,
 	))
-}
-
-func (m *TodosModel) HeaderView() string {
-	var leftTabs []string
-
-	for status := models.Open; status <= models.Done; status++ {
-		isSelected := int(m.tuiService.CurrentView) == int(status)
-		translatedStatus := m.translator.T(status.String())
-		tab := styling.GetStyledStatus(translatedStatus, status, isSelected, false, false)
-		leftTabs = append(leftTabs, tab)
-	}
-
-	leftContent := lipgloss.JoinHorizontal(lipgloss.Center, leftTabs...)
-
-	isAllSelected := m.tuiService.CurrentView == service.AllPane
-	allTab := styling.GetStyledTagWithIndicator(4, m.translator.T("filter.all"), theme.Rosewater, isAllSelected, false, false)
-
-	const minGap = 2
-	availableWidth := m.width - 2 // -2 for padding
-	leftWidth := lipgloss.Width(leftContent)
-	rightWidth := lipgloss.Width(allTab)
-
-	if leftWidth+minGap+rightWidth >= availableWidth {
-		return lipgloss.JoinHorizontal(lipgloss.Center, leftContent, allTab)
-	}
-
-	spacerWidth := availableWidth - leftWidth - rightWidth
-	spacer := strings.Repeat(" ", spacerWidth)
-
-	return lipgloss.JoinHorizontal(lipgloss.Center, leftContent, spacer, allTab)
 }
 
 // ===========================================================================
@@ -350,11 +320,11 @@ type todoStatusChangedMsg struct {
 	newStatus string
 }
 
-type todoErrorMsg struct {
+type TodoErrorMsg struct {
 	err error
 }
 
-func (e todoErrorMsg) Error() string {
+func (e TodoErrorMsg) Error() string {
 	return e.err.Error()
 }
 
@@ -366,18 +336,24 @@ type UpdateCheckCompletedMsg struct {
 	ForceUpdate bool
 }
 
+type InitMsg struct{}
+
 // ===========================================================================
 // Commands
 // ===========================================================================
 func (m *TodosModel) loadTodosCmd() tea.Cmd {
 	return func() tea.Msg {
+		if m.tuiService.CurrentView == service.TodayPane {
+			return GetTodayDataMsg{}
+		}
+
 		todos, err := m.service.GetFilteredTodos(
 			m.tuiService.CurrentView,
 			m.tuiService.FilterState.IncludeArchived,
 		)
 
 		if err != nil {
-			return todoErrorMsg{err: err}
+			return TodoErrorMsg{err: err}
 		}
 
 		return todosLoadedMsg{todos: todos}
@@ -388,7 +364,7 @@ func (m *TodosModel) advanceTodoStatusCmd(todoID int64) tea.Cmd {
 	return func() tea.Msg {
 		newStatus, err := m.service.AdvanceStatus(todoID)
 		if err != nil {
-			return todoErrorMsg{err: err}
+			return TodoErrorMsg{err: err}
 		}
 
 		return todoStatusChangedMsg{newStatus: newStatus.String()}
@@ -427,7 +403,7 @@ func (m *TodosModel) toggleArchiveCmd(todoID int64, isArchived bool) tea.Cmd {
 		}
 
 		if err != nil {
-			return todoErrorMsg{err: err}
+			return TodoErrorMsg{err: err}
 		}
 
 		action := "archived"
@@ -467,4 +443,8 @@ func (m *TodosModel) showAboutModalCmd() tea.Cmd {
 		)
 		return showModalMsg{}
 	}
+}
+
+func InitCmd() tea.Msg {
+	return InitMsg{}
 }
