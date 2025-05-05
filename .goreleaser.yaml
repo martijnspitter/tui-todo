@@ -98,11 +98,19 @@ nfpms:
     package_name: tui-todo
     file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Arch }}"
 
+    bindir: /usr/local/bin
+
+    formats:
+      - deb
+      - rpm
+      - apk
+
+    builds:
+      - tui-todo
+
     contents:
-      - src: "./dist/tui-todo_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}/tui-todo"
-        dst: "/usr/local/bin/todo"
-        file_info:
-          mode: 0755
+      - src: LICENSE*
+        dst: /usr/share/licenses/tui-todo/
 
     # Package details
     vendor: Martijn Spitter
@@ -115,12 +123,6 @@ nfpms:
     # Dependencies (minimal for Go apps)
     dependencies:
       - libc6
-
-    # Supported formats
-    formats:
-      - deb
-      - rpm
-      - apk
 
     # .deb specific
     deb:
