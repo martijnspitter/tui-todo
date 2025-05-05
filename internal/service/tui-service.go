@@ -7,7 +7,7 @@ import (
 type ViewType int
 
 const (
-	TodayPane ViewType = iota
+	TodayPane ViewType = iota + 1
 	OpenPane
 	DoingPane
 	DonePane
@@ -53,15 +53,15 @@ func NewTuiService() *TuiService {
 
 func (t *TuiService) SwitchPane(key string) {
 	switch key {
-	case "0":
-		t.CurrentView = TodayPane
 	case "1":
-		t.CurrentView = OpenPane
+		t.CurrentView = TodayPane
 	case "2":
-		t.CurrentView = DoingPane
+		t.CurrentView = OpenPane
 	case "3":
-		t.CurrentView = DonePane
+		t.CurrentView = DoingPane
 	case "4":
+		t.CurrentView = DonePane
+	case "5":
 		t.CurrentView = AllPane
 	}
 }

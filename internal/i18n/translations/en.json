@@ -1,27 +1,30 @@
 {
   "app.title": "TUI Todo",
-
   "update_available": "Update available!",
   "version": "Version {{.Version}}",
   "update_required": "Update required",
   "update_required_subtitle": "Please update to the latest version to continue. The new version includes the following changes:",
-
   "about_title": "About TUI Todo",
   "about_subtitle": "A powerful, terminal-based todo application built with Go. Manage your tasks efficiently without leaving the command line.",
   "about_notes_title": "Release Notes {{.Version}}",
-
+  "today_title": "Today",
+  "today_overview_title": "📊 TODAY'S OVERVIEW",
+  "today_completed": "{{.completed}}/{{.total}} todos complete ({{.percent}}%)",
+  "today_high_prio": "🔥 HIGH PRIORITY ({{.count}})",
+  "today_over_due": "⏰ OVERDUE ({{.count}})",
+  "today_due_today": "📅 DUE TODAY ({{.count}})",
+  "today_in_progress": "⏳ IN PROGRESS ({{.count}})",
+  "today_coming_up": "📅 COMING UP ({{.count}})",
   "status.open": "Open",
   "status.doing": "Doing",
   "status.done": "Done",
   "status.unknown": "Unknown",
-
   "priority.low": "Low",
   "priority.medium": "Medium",
   "priority.high": "High",
   "priority.major": "Major",
   "priority.critical": "Critical",
   "priority.unknown": "Unknown",
-
   "action.new": "New Todo",
   "action.edit": "Edit Todo",
   "action.delete": "Delete Todo",
@@ -29,24 +32,19 @@
   "action.unarchive": "Unarchive",
   "action.save": "Save",
   "action.cancel": "Cancel",
-
   "modal.confirm_delete": "Are you sure you want to delete this todo?",
   "modal.edit_todo": "Edit Todo #{{.ID}}",
   "modal.new_todo": "Create New Todo",
-
   "button.cancel": "Cancel",
   "button.delete": "Delete",
   "button.save": "Save",
-
   "filter.all": "All",
   "filter.archived": "Archived",
   "filter.by_tag": "Filtering by tag",
   "filter.by_title": "Filtering by title & description",
   "filter.today": "Today",
-
   "footer.hide_archived": "[ ] Archived",
   "footer.show_archived": "[✓] Archived",
-
   "toast.todo_created": "Todo created",
   "toast.todo_updated": "Todo updated",
   "toast.todo_deleted": "Todo deleted",
@@ -55,7 +53,6 @@
   "toast.unarchived": "Todo unarchived",
   "toast.filter_archived_shown": "Archived todos shown",
   "toast.filter_archived_hidden": "Archived todos hidden",
-
   "field.title": "Title",
   "field.description": "Description",
   "field.tags": "Tags (comma separated)",
@@ -63,7 +60,6 @@
   "field.priority": "Priority",
   "field.status": "Status",
   "field.updated_at": "Updated At",
-
   "help.ctrl_n": "New",
   "help.ctrl_e": "Edit",
   "help.ctrl_d": "Delete",
@@ -78,6 +74,8 @@
   "help.toggle": "Toggle help",
   "help.up": "Up",
   "help.down": "Down",
+  "help.page_up": "Page Up",
+  "help.page_down": "Page Down",
   "help.filter": "Filter",
   "help.cancel": "Cancel",
   "help.home": "Go to start",
@@ -85,12 +83,10 @@
   "help.tag_filter": "Filter by tag",
   "help.save": "Save",
   "help.i": "About",
-
   "ui.updated": "Updated: {{.Time}}",
   "ui.due": "Due: {{.Time}}",
   "ui.error.invalid_date": "Invalid due date format",
   "ui.error.add_tag": "Could not add tag: {{.TagName}}",
-
   "error.todos_not_found": "Todos not found",
   "error.todo_not_found": "Todo not found",
   "error.create_failed": "Failed to create todo",

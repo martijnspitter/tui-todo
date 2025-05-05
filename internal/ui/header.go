@@ -47,11 +47,11 @@ func (m *HeaderModel) View() string {
 	var leftTabs []string
 
 	isTodaySelected := m.tuiService.CurrentView == service.TodayPane
-	todayTab := styling.GetStyledTagWithIndicator(0, m.translator.T("filter.today"), theme.Lavender, isTodaySelected, false, false)
+	todayTab := styling.GetStyledTagWithIndicator(1, m.translator.T("filter.today"), theme.Lavender, isTodaySelected, false, false)
 	leftTabs = append(leftTabs, todayTab)
 
 	for status := models.Open; status <= models.Done; status++ {
-		isSelected := int(m.tuiService.CurrentView) == int(status)
+		isSelected := int(m.tuiService.CurrentView) == int(status)+2
 		translatedStatus := m.translator.T(status.String())
 		tab := styling.GetStyledStatus(translatedStatus, status, isSelected, false, false)
 		leftTabs = append(leftTabs, tab)
@@ -60,7 +60,7 @@ func (m *HeaderModel) View() string {
 	leftContent := lipgloss.JoinHorizontal(lipgloss.Center, leftTabs...)
 
 	isAllSelected := m.tuiService.CurrentView == service.AllPane
-	allTab := styling.GetStyledTagWithIndicator(4, m.translator.T("filter.all"), theme.Rosewater, isAllSelected, false, false)
+	allTab := styling.GetStyledTagWithIndicator(5, m.translator.T("filter.all"), theme.Rosewater, isAllSelected, false, false)
 
 	const minGap = 2
 	availableWidth := m.width - 2 // -2 for padding

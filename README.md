@@ -7,6 +7,7 @@ A powerful, terminal-based todo application built with Go. Manage your tasks eff
 [![License](https://img.shields.io/github/license/martijnspitter/tui-todo)](LICENSE)
 
 ![Todo TUI Screenshot](docs/images/screenshot.png)
+![Todo TUI Today Overview](docs/images/today.png)
 
 ## Table of Contents
 

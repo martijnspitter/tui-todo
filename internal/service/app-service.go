@@ -252,15 +252,35 @@ func (s *AppService) GetCompletedTodos() ([]*models.Todo, error) {
 	return sortTodos(todos), nil
 }
 
-func (s *AppService) GetTodosForToday() ([]*models.Todo, error) {
+func (s *AppService) GetTodosForToday() (highPrio, dueToday, inProgress, overDue, comingUp []*models.Todo, error error) {
 	// Get todos that are due today and not archived
-	todos, err := s.todoRepo.GetAll(repository.DueTodayOrPrioAboveHighFilter(), repository.NotArchivedFilter())
+	highPrio, err := s.todoRepo.GetAll(repository.PrioAboveHighFilter(), repository.NotArchivedFilter())
 	if err != nil {
-		log.Error("Failed to fetch todos for today", "error", err)
-		return nil, fmt.Errorf("error.todos_not_found")
+		log.Error("Failed to fetch highPrio for today", "error", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
+	}
+	dueToday, err = s.todoRepo.GetAll(repository.DueTodayFilter(), repository.NotArchivedFilter())
+	if err != nil {
+		log.Error("Failed to fetch dueToday for today", "error", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
+	}
+	inProgress, err = s.todoRepo.GetActive()
+	if err != nil {
+		log.Error("Failed to fetch inProgress for today", "error", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
+	}
+	overDue, err = s.todoRepo.GetAll(repository.OverDueFilter(), repository.NotArchivedFilter())
+	if err != nil {
+		log.Error("Failed to fetch overDue for today", "error", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
+	}
+	comingUp, err = s.todoRepo.GetAll(repository.ComingUpFilter(), repository.NotArchivedFilter())
+	if err != nil {
+		log.Error("Failed to fetch comingUp for today", "error", err)
+		return nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
 	}
 
-	return sortTodos(todos), nil
+	return sortTodos(highPrio), sortTodos(dueToday), sortTodos(inProgress), sortTodos(overDue), sortTodos(comingUp), nil
 }
 
 func (s *AppService) GetTodayCompletionStats() (completed int, total int) {
@@ -272,7 +292,7 @@ func (s *AppService) GetTodayCompletionStats() (completed int, total int) {
 	}
 
 	// Get all tasks that would show in today's dashboard (not completed yet)
-	currentTodayTasks, err := s.GetTodosForToday()
+	currentTodayTasks, err := s.todoRepo.GetAll(repository.AllTodayFilter(), repository.NotArchivedFilter())
 	if err != nil {
 		log.Error("Failed to fetch today's tasks", "error", err)
 		return len(completedToday), len(completedToday)
@@ -410,8 +430,6 @@ func (s *AppService) GetFilteredTodos(currentView ViewType, showArchived bool) (
 	var err error
 
 	switch currentView {
-	case TodayPane:
-		return s.GetTodosForToday()
 	case OpenPane:
 		todos, err = s.GetOpenTodos()
 	case DoingPane:

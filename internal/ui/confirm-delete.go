@@ -63,7 +63,7 @@ func (m *ConfirmDeleteModel) deleteTodoCmd() tea.Cmd {
 	return func() tea.Msg {
 		err := m.service.DeleteTodo(m.todoID)
 		if err != nil {
-			return todoErrorMsg{err: err}
+			return TodoErrorMsg{err: err}
 		}
 		return todoDeletedMsg{}
 	}

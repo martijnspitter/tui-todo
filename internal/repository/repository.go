@@ -28,33 +28,56 @@ type TodoRepository interface {
 // Filter returns a WHERE clause fragment and associated arguments
 type Filter func() (string, []any)
 
-// Common filters you can use
-func DueTodayOrPrioAboveHighFilter() Filter {
+func PrioAboveHighFilter() Filter {
+	return func() (string, []any) {
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		return "(priority >= ? AND (due_date IS NULL OR due_date < ?) AND status != ?)", []interface{}{
+			models.Major,
+			today,
+			models.Done,
+		}
+	}
+}
+
+func OverDueFilter() Filter {
+	return func() (string, []any) {
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		return "(due_date IS NOT NULL AND due_date < ? AND status != ?)", []interface{}{
+			today,
+			models.Done,
+		}
+	}
+}
+
+func DueTodayFilter() Filter {
 	return func() (string, []any) {
 		now := time.Now()
 		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		tomorrow := today.Add(24 * time.Hour)
 
-		// Only include:
-		// 1. Tasks due today (not completed), OR
-		// 2. Tasks that are overdue (not completed), OR
-		// 3. Tasks with Major or Critical priority (not completed)
-		return "((" +
-				// Due today
-				"(due_date IS NOT NULL AND due_date >= ? AND due_date < ?)" +
-				" OR " +
-				// Overdue
-				"(due_date IS NOT NULL AND due_date < ?)" +
-				" OR " +
-				// High priority (without future due date)
-				"(priority >= ? AND (due_date IS NULL OR due_date < ?))" +
-				") AND status != ?)",
+		return "(due_date IS NOT NULL AND due_date >= ? AND due_date < ? AND status != ?)",
 			[]interface{}{
-				today, tomorrow, // For due today
-				today,        // For overdue
-				models.Major, // For high priority
-				tomorrow,     // Exclude future high priority tasks
-				models.Done,  // Exclude completed tasks
+				today,
+				tomorrow,
+				models.Done, // Exclude completed tasks
+			}
+	}
+}
+
+func ComingUpFilter() Filter {
+	return func() (string, []any) {
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		tomorrow := today.Add(24 * time.Hour)    // Start from tomorrow
+		inThreeDays := today.Add(72 * time.Hour) // Show next 3 days from today
+
+		return "(due_date IS NOT NULL AND due_date >= ? AND due_date < ? AND status != ?)",
+			[]interface{}{
+				tomorrow,
+				inThreeDays,
+				models.Done, // Exclude completed tasks
 			}
 	}
 }
@@ -66,6 +89,63 @@ func CompletedTodayFilter() Filter {
 
 		return "status = ? AND updated_at >= ?",
 			[]interface{}{models.Done, today}
+	}
+}
+
+// AllTodayFilter combines all filters for the Today dashboard:
+// - High priority tasks
+// - Overdue tasks
+// - Tasks due today
+// - Tasks in progress
+// - Coming up tasks (next 3 days)
+func AllTodayFilter() Filter {
+	return func() (string, []any) {
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		tomorrow := today.Add(24 * time.Hour)
+		inThreeDays := today.Add(72 * time.Hour)
+
+		whereClause := `(
+            -- High priority tasks
+            (priority >= ? AND status != ?)
+            OR
+            -- Overdue tasks
+            (due_date IS NOT NULL AND due_date < ? AND status != ?)
+            OR
+            -- Due today
+            (due_date IS NOT NULL AND due_date >= ? AND due_date < ? AND status != ?)
+            OR
+            -- In progress tasks
+            (status = ?)
+            OR
+            -- Coming up tasks
+            (due_date IS NOT NULL AND due_date >= ? AND due_date < ? AND status != ?)
+        )`
+
+		args := []interface{}{
+			// High priority args
+			models.Major,
+			models.Done,
+
+			// Overdue args
+			today,
+			models.Done,
+
+			// Due today args
+			today,
+			tomorrow,
+			models.Done,
+
+			// In progress arg
+			models.Doing,
+
+			// Coming up args
+			tomorrow,
+			inThreeDays,
+			models.Done,
+		}
+
+		return whereClause, args
 	}
 }
 

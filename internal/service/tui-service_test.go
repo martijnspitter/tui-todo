@@ -11,7 +11,7 @@ func TestNewTuiService(t *testing.T) {
 	svc := service.NewTuiService()
 
 	// Check default state
-	if svc.CurrentView != service.DoingPane {
+	if svc.CurrentView != service.TodayPane {
 		t.Errorf("Expected default view to be DoingPane, got %v", svc.CurrentView)
 	}
 
@@ -220,7 +220,7 @@ func TestViewSwitchingMethods(t *testing.T) {
 		{
 			name:         "Switch to list view",
 			switchFunc:   func(s *service.TuiService) { s.SwitchToListView() },
-			expectedView: service.OpenPane,
+			expectedView: service.TodayPane,
 		},
 		{
 			name:         "Switch to edit todo view",
