@@ -24,6 +24,8 @@ type KeyMap struct {
 	TagFilter      key.Binding
 	Save           key.Binding
 	About          key.Binding
+	PageDown       key.Binding
+	PageUp         key.Binding
 }
 
 func DefaultKeyMap() KeyMap {
@@ -37,8 +39,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("left/shift+tab", "help.left_shift_tab"),
 		),
 		SwitchPane: key.NewBinding(
-			key.WithKeys("1", "2", "3", "4"),
-			key.WithHelp("1-4", "help.1_4"),
+			key.WithKeys("1", "2", "3", "4", "5"),
+			key.WithHelp("1-5", "help.pane"),
 		),
 		Select: key.NewBinding(
 			key.WithKeys("enter"),
@@ -83,6 +85,14 @@ func DefaultKeyMap() KeyMap {
 		Down: key.NewBinding(
 			key.WithKeys("j", "↓"),
 			key.WithHelp("↓/j", "help.down"),
+		),
+		PageDown: key.NewBinding(
+			key.WithKeys("pgdown", " ", "f"),
+			key.WithHelp("f/pgdn", "help.page_down"),
+		),
+		PageUp: key.NewBinding(
+			key.WithKeys("pgup", "b"),
+			key.WithHelp("b/pgup", "help.page_up"),
 		),
 		Filter: key.NewBinding(
 			key.WithKeys("/"),

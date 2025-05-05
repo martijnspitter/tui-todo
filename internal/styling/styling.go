@@ -23,7 +23,7 @@ var (
 func GetStyledStatus(translatedStatus string, status models.Status, selected, omitNumber, hovered bool) string {
 	statusColor := status.Color()
 
-	return GetStyledTagWithIndicator(int(status)+1, translatedStatus, statusColor, selected, omitNumber, hovered)
+	return GetStyledTagWithIndicator(int(status)+2, translatedStatus, statusColor, selected, omitNumber, hovered)
 }
 
 func GetStyledTagWithIndicator(num int, text string, color lipgloss.Color, selected, omitNumber, hovered bool) string {
