@@ -95,24 +95,17 @@ brews:
 
 nfpms:
   - id: tui-todo-packages
-    package_name: tui-todo
-    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Arch }}"
+    package_name: todo
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
-    bindir: /usr/local/bin
-
-    formats:
-      - deb
-      - rpm
-      - apk
-
-    builds:
+    # Reference the build ID
+    ids:
       - tui-todo
 
-    contents:
-      - src: LICENSE*
-        dst: /usr/share/licenses/tui-todo/
+    # Standard installation path
+    bindir: /usr/bin
 
-    # Package details
+    # Package metadata
     vendor: Martijn Spitter
     homepage: https://github.com/martijnspitter/tui-todo
     maintainer: Martijn Spitter <info@martijnspitter.nl>
@@ -120,25 +113,24 @@ nfpms:
       A feature-rich terminal-based todo application built with Go.
       Organize tasks with tags, priorities, and due dates without leaving your terminal.
     license: MIT
-    # Dependencies (minimal for Go apps)
+    # Dependencies
     dependencies:
       - libc6
+
+    # Package formats
+    formats:
+      - deb
+      - rpm
+      - apk
+
+    # Contents section allows you to add extra files or symlinks
+    contents:
+      # Create a symlink so the command is available as 'todo'
+      - src: /usr/bin/tui-todo
+        dst: /usr/bin/todo
+        type: symlink
 
     # .deb specific
     deb:
       lintian_overrides:
         - statically-linked-binary
-
-snapcrafts:
-  - id: tui-todo
-    name: tui-todo
-    summary: Terminal-based todo application
-    description: |
-      A feature-rich terminal-based todo application built with Go.
-      Organize tasks with tags, priorities, and due dates without leaving your terminal.
-    grade: stable
-    confinement: strict
-    apps:
-      tui-todo:
-        command: todo
-        plugs: [home, network, desktop-legacy]
