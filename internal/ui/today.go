@@ -141,11 +141,7 @@ func (m *TodayDashboardModel) renderDashboard() string {
 		Render(overviewContent)
 
 	// If no data is loaded yet, show loading state
-	if len(m.highPriorityTasks) == 0 &&
-		len(m.dueTodayTasks) == 0 &&
-		len(m.inProgressTasks) == 0 &&
-		len(m.overdueTasks) == 0 &&
-		len(m.upcomingTasks) == 0 {
+	if m.allTodosEmpty() {
 		emptyBox := lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(theme.Green).
@@ -401,6 +397,14 @@ func (m *TodayDashboardModel) renderProgressBar() string {
 			Foreground(lipgloss.Color("#565f89")).
 			Render(empty) + "  " + completedStats
 
+}
+
+func (m *TodayDashboardModel) allTodosEmpty() bool {
+	return len(m.highPriorityTasks) == 0 &&
+		len(m.dueTodayTasks) == 0 &&
+		len(m.inProgressTasks) == 0 &&
+		len(m.overdueTasks) == 0 &&
+		len(m.upcomingTasks) == 0
 }
 
 // ===========================================================================
