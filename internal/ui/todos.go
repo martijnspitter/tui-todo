@@ -278,6 +278,8 @@ func (m *TodosModel) View() string {
 	listView := lipgloss.NewStyle().Width(m.width - 2).Padding(styling.Padding).Render(m.list.View())
 	if m.tuiService.CurrentView == service.TodayPane {
 		listView = m.today.View()
+	} else if len(m.list.Items()) == 0 {
+		listView = EmptyStateView(m.translator, m.width, m.height)
 	}
 
 	padding := lipgloss.NewStyle().Padding(1, 1)
