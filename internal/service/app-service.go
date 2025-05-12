@@ -328,10 +328,10 @@ func (s *AppService) GetTodayCompletionStats() (completed int, total int, format
 	}
 
 	for _, todo := range completedToday {
-		timeSpent = todo.GetTotalSeconds()
+		timeSpent += todo.GetTotalSeconds()
 	}
 	for _, todo := range currentTodayTasks {
-		timeSpent = todo.GetTotalSeconds()
+		timeSpent += todo.GetTotalSeconds()
 	}
 
 	return len(completedToday), len(completedToday) + len(currentTodayTasks), utils.FormatTime(timeSpent)
