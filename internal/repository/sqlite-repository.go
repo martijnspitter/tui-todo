@@ -54,8 +54,8 @@ func (r *SQLiteTodoRepository) Close() error {
 func (r *SQLiteTodoRepository) Create(todo *models.Todo) error {
 	// Implementation with SQL
 	stmt, err := r.db.Prepare(`
-        INSERT INTO todos (title, description, status, created_at, updated_at, priority, due_date, archived)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO todos (title, description, status, created_at, updated_at, priority, due_date, archived, time_spent, time_started)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 	if err != nil {
 		return err
@@ -71,6 +71,8 @@ func (r *SQLiteTodoRepository) Create(todo *models.Todo) error {
 		todo.Priority,
 		todo.DueDate,
 		todo.Archived,
+		todo.TimeSpent,
+		todo.TimeStarted,
 	)
 	if err != nil {
 		return err
@@ -89,7 +91,7 @@ func (r *SQLiteTodoRepository) GetByID(id int64) (*models.Todo, error) {
 	// Query to get todo with its tags in a single operation
 	rows, err := r.db.Query(`
         SELECT t.id, t.title, t.description, t.status, t.created_at, t.updated_at,
-               t.due_date, t.priority, t.archived, tag.name as tag_name
+               t.due_date, t.priority, t.archived, tag.name as tag_name, t.time_spent, t.time_started
         FROM todos t
         LEFT JOIN todo_tags tt ON t.id = tt.todo_id
         LEFT JOIN tags tag ON tt.tag_id = tag.id
@@ -115,6 +117,8 @@ func (r *SQLiteTodoRepository) GetByID(id int64) (*models.Todo, error) {
 		var priority models.Priority
 		var tagName sql.NullString
 		var archived bool
+		var timeSpent int64
+		var timeStarted sql.NullTime
 
 		// Scan row data
 		if err := rows.Scan(
@@ -128,6 +132,8 @@ func (r *SQLiteTodoRepository) GetByID(id int64) (*models.Todo, error) {
 			&priority,
 			&archived,
 			&tagName,
+			&timeSpent,
+			&timeStarted,
 		); err != nil {
 			return nil, err
 		}
@@ -144,10 +150,15 @@ func (r *SQLiteTodoRepository) GetByID(id int64) (*models.Todo, error) {
 				Priority:    priority,
 				Tags:        []string{},
 				Archived:    archived,
+				TimeSpent:   timeSpent,
 			}
 
 			if dueDate.Valid {
 				todo.DueDate = &dueDate.Time
+			}
+
+			if timeStarted.Valid {
+				todo.TimeStarted = &timeStarted.Time
 			}
 
 			foundTodo = true
@@ -181,7 +192,7 @@ func (r *SQLiteTodoRepository) GetAll(filters ...Filter) ([]*models.Todo, error)
 	// Base query with joins to fetch todos and their tags
 	query := `
      SELECT t.id, t.title, t.description, t.status, t.created_at, t.updated_at,
-            t.due_date, t.priority, t.archived, tag.name as tag_name
+            t.due_date, t.priority, t.archived, tag.name as tag_name, t.time_spent, t.time_started
      FROM todos t
      LEFT JOIN todo_tags tt ON t.id = tt.todo_id
      LEFT JOIN tags tag ON tt.tag_id = tag.id
@@ -227,6 +238,8 @@ func (r *SQLiteTodoRepository) GetAll(filters ...Filter) ([]*models.Todo, error)
 		var priority models.Priority
 		var tagName sql.NullString
 		var archived bool
+		var timeSpent int64
+		var timeStarted sql.NullTime
 
 		// Scan the row
 		if err := rows.Scan(
@@ -240,6 +253,8 @@ func (r *SQLiteTodoRepository) GetAll(filters ...Filter) ([]*models.Todo, error)
 			&priority,
 			&archived,
 			&tagName,
+			&timeSpent,
+			&timeStarted,
 		); err != nil {
 			return nil, err
 		}
@@ -257,10 +272,15 @@ func (r *SQLiteTodoRepository) GetAll(filters ...Filter) ([]*models.Todo, error)
 				Priority:    priority,
 				Archived:    archived,
 				Tags:        []string{},
+				TimeSpent:   timeSpent,
 			}
 
 			if dueDate.Valid {
 				todo.DueDate = &dueDate.Time
+			}
+
+			if timeStarted.Valid {
+				todo.TimeStarted = &timeStarted.Time
 			}
 
 			todosMap[todoID] = todo
@@ -299,7 +319,8 @@ func (r *SQLiteTodoRepository) GetAll(filters ...Filter) ([]*models.Todo, error)
 func (r *SQLiteTodoRepository) Update(todo *models.Todo) error {
 	stmt, err := r.db.Prepare(`
         UPDATE todos
-        SET title = ?, description = ?, status = ?, updated_at = ?, due_date = ?, priority = ?, archived = ?
+        SET title = ?, description = ?, status = ?, updated_at = ?, due_date = ?, priority = ?, archived = ?,
+            time_spent = ?, time_started = ?
         WHERE id = ?
     `)
 	if err != nil {
@@ -314,6 +335,13 @@ func (r *SQLiteTodoRepository) Update(todo *models.Todo) error {
 		dueDate = nil
 	}
 
+	var timeStarted any
+	if todo.TimeStarted != nil {
+		timeStarted = *todo.TimeStarted
+	} else {
+		timeStarted = nil
+	}
+
 	_, err = stmt.Exec(
 		todo.Title,
 		todo.Description,
@@ -322,6 +350,8 @@ func (r *SQLiteTodoRepository) Update(todo *models.Todo) error {
 		dueDate,
 		todo.Priority,
 		todo.Archived,
+		todo.TimeSpent,
+		timeStarted,
 		todo.ID,
 	)
 	return err
@@ -445,7 +475,8 @@ func (r *SQLiteTodoRepository) GetTodoTags(todoID int64) ([]string, error) {
 // FindTodosByTag returns todos with the specified tag
 func (r *SQLiteTodoRepository) FindTodosByTag(tagName string) ([]*models.Todo, error) {
 	rows, err := r.db.Query(`
-        SELECT t.id, t.title, t.description, t.status, t.created_at, t.updated_at, t.due_date, t.priority, t.archived
+        SELECT t.id, t.title, t.description, t.status, t.created_at, t.updated_at, t.due_date, t.priority, t.archived,
+               t.time_spent, t.time_started
         FROM todos t
         JOIN todo_tags tt ON t.id = tt.todo_id
         JOIN tags tag ON tt.tag_id = tag.id
@@ -460,6 +491,7 @@ func (r *SQLiteTodoRepository) FindTodosByTag(tagName string) ([]*models.Todo, e
 	for rows.Next() {
 		todo := &models.Todo{}
 		var dueDate sql.NullTime
+		var timeStarted sql.NullTime
 
 		if err := rows.Scan(
 			&todo.ID,
@@ -471,12 +503,18 @@ func (r *SQLiteTodoRepository) FindTodosByTag(tagName string) ([]*models.Todo, e
 			&dueDate,
 			&todo.Priority,
 			&todo.Archived,
+			&todo.TimeSpent,
+			&timeStarted,
 		); err != nil {
 			return nil, err
 		}
 
 		if dueDate.Valid {
 			todo.DueDate = &dueDate.Time
+		}
+
+		if timeStarted.Valid {
+			todo.TimeStarted = &timeStarted.Time
 		}
 
 		// Get tags for this todo
@@ -507,7 +545,9 @@ func initSchema(db *sql.DB) error {
             updated_at TIMESTAMP NOT NULL,
             due_date TIMESTAMP,
             priority INTEGER DEFAULT 0,
-            archived BOOLEAN DEFAULT 0
+            archived BOOLEAN DEFAULT 0,
+            time_spent INTEGER DEFAULT 0,
+            time_started TIMESTAMP
         )
     `)
 	if err != nil {

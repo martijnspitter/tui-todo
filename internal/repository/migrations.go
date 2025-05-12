@@ -65,14 +65,34 @@ func (m *MigrationManager) ApplyMigrations(migrations []Migration) error {
 		return fmt.Errorf("couldn't get applied migrations: %w", err)
 	}
 
-	// Sort migrations by ID (should be already sorted, but just to be safe)
-	// We can add sorting logic here if needed
-
 	for _, migration := range migrations {
-		// Skip if already applied
+		// Skip if already applied, but validate critical migrations
 		if appliedMigrations[migration.ID] {
 			log.Debug("Migration already applied", "id", migration.ID, "name", migration.Name)
-			continue
+
+			// For critical migrations, validate they actually applied correctly
+			valid, err := m.ValidateMigration(migration.ID)
+			if err != nil {
+				log.Warn("Failed to validate migration", "id", migration.ID, "error", err)
+				// Continue anyway, since this is just a validation check
+				continue
+			}
+
+			if !valid {
+				log.Warn("Migration marked as applied but validation failed - removing record",
+					"id", migration.ID, "name", migration.Name)
+
+				// Remove the invalid migration record
+				_, err := m.db.Exec("DELETE FROM schema_migrations WHERE id = ?", migration.ID)
+				if err != nil {
+					return fmt.Errorf("couldn't remove invalid migration record: %w", err)
+				}
+
+				// Now continue to re-apply this migration
+			} else {
+				// Migration is valid, continue to next one
+				continue
+			}
 		}
 
 		log.Info("Applying migration", "id", migration.ID, "name", migration.Name)
@@ -87,6 +107,22 @@ func (m *MigrationManager) ApplyMigrations(migrations []Migration) error {
 		if err := migration.RunSQL(tx); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("migration %d failed: %w", migration.ID, err)
+		}
+
+		// For critical migrations, validate before committing
+		if migration.ID == 2 { // Time tracking migration
+			var timeSpentExists, timeStartedExists int
+			err := tx.QueryRow("SELECT COUNT(*) FROM pragma_table_info('todos') WHERE name = 'time_spent'").Scan(&timeSpentExists)
+			if err != nil || timeSpentExists == 0 {
+				tx.Rollback()
+				return fmt.Errorf("migration failed: time_spent column not created")
+			}
+
+			err = tx.QueryRow("SELECT COUNT(*) FROM pragma_table_info('todos') WHERE name = 'time_started'").Scan(&timeStartedExists)
+			if err != nil || timeStartedExists == 0 {
+				tx.Rollback()
+				return fmt.Errorf("migration failed: time_started column not created")
+			}
 		}
 
 		// Record that this migration was applied
@@ -110,4 +146,29 @@ func (m *MigrationManager) ApplyMigrations(migrations []Migration) error {
 	}
 
 	return nil
+}
+
+func (m *MigrationManager) ColumnExists(table, column string) (bool, error) {
+	var exists bool
+	query := `SELECT COUNT(*) > 0 FROM pragma_table_info(?) WHERE name = ?`
+	err := m.db.QueryRow(query, table, column).Scan(&exists)
+	return exists, err
+}
+
+func (m *MigrationManager) ValidateMigration(migrationID int) (bool, error) {
+	switch migrationID {
+	case 2: // Time tracking migration
+		timeSpentExists, err := m.ColumnExists("todos", "time_spent")
+		if err != nil {
+			return false, err
+		}
+		timeStartedExists, err := m.ColumnExists("todos", "time_started")
+		if err != nil {
+			return false, err
+		}
+		return timeSpentExists && timeStartedExists, nil
+	default:
+		// For other migrations, just assume they're valid
+		return true, nil
+	}
 }

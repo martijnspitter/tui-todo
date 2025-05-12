@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/repository"
+	"github.com/martijnspitter/tui-todo/internal/utils"
 )
 
 type UpdateInfo struct {
@@ -54,6 +55,13 @@ func (s *AppService) CreateTodo(title, description string, priority models.Prior
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 		DueDate:     dueDate,
+		TimeSpent:   0,
+	}
+
+	// If creating a task directly in Doing status, set time_started
+	if status == models.Doing {
+		now := time.Now()
+		todo.TimeStarted = &now
 	}
 
 	err := s.todoRepo.Create(todo)
@@ -133,6 +141,13 @@ func (s *AppService) MarkAsOpen(id int64) error {
 		return fmt.Errorf("error.todo_not_found")
 	}
 
+	// If transitioning from Doing to Open, calculate elapsed time
+	if todo.Status == models.Doing && todo.TimeStarted != nil {
+		elapsed := time.Since(*todo.TimeStarted).Seconds()
+		todo.TimeSpent += int64(elapsed)
+		todo.TimeStarted = nil // Clear the start time when moving to Open
+	}
+
 	todo.Status = models.Open
 	todo.UpdatedAt = time.Now()
 
@@ -152,6 +167,12 @@ func (s *AppService) MarkAsDoing(id int64) error {
 		return fmt.Errorf("error.todo_not_found")
 	}
 
+	// Set time_started only if not already in Doing status
+	if todo.Status != models.Doing {
+		now := time.Now()
+		todo.TimeStarted = &now
+	}
+
 	todo.Status = models.Doing
 	todo.UpdatedAt = time.Now()
 
@@ -169,6 +190,13 @@ func (s *AppService) MarkAsDone(id int64) error {
 	if err != nil {
 		log.Error("Failed to fetch todo for status change", "error", err, "id", id)
 		return fmt.Errorf("error.todo_not_found")
+	}
+
+	// Calculate and accumulate time spent if task was in Doing status
+	if todo.Status == models.Doing && todo.TimeStarted != nil {
+		elapsed := time.Since(*todo.TimeStarted).Seconds()
+		todo.TimeSpent += int64(elapsed)
+		todo.TimeStarted = nil // Clear the start time
 	}
 
 	todo.Status = models.Done
@@ -283,22 +311,30 @@ func (s *AppService) GetTodosForToday() (highPrio, dueToday, inProgress, overDue
 	return sortTodos(highPrio), sortTodos(dueToday), sortTodos(inProgress), sortTodos(overDue), sortTodos(comingUp), nil
 }
 
-func (s *AppService) GetTodayCompletionStats() (completed int, total int) {
+func (s *AppService) GetTodayCompletionStats() (completed int, total int, formattedTimeSpent string) {
+	var timeSpent int64
 	// Get tasks completed today
 	completedToday, err := s.todoRepo.GetAll(repository.CompletedTodayFilter())
 	if err != nil {
 		log.Error("Failed to fetch today's completed tasks", "error", err)
-		return 0, 0
+		return 0, 0, ""
 	}
 
 	// Get all tasks that would show in today's dashboard (not completed yet)
 	currentTodayTasks, err := s.todoRepo.GetAll(repository.AllTodayFilter(), repository.NotArchivedFilter())
 	if err != nil {
 		log.Error("Failed to fetch today's tasks", "error", err)
-		return len(completedToday), len(completedToday)
+		return len(completedToday), len(completedToday), ""
 	}
 
-	return len(completedToday), len(completedToday) + len(currentTodayTasks)
+	for _, todo := range completedToday {
+		timeSpent = todo.GetTotalSeconds()
+	}
+	for _, todo := range currentTodayTasks {
+		timeSpent = todo.GetTotalSeconds()
+	}
+
+	return len(completedToday), len(completedToday) + len(currentTodayTasks), utils.FormatTime(timeSpent)
 }
 
 // Tag methods
@@ -375,6 +411,93 @@ func (s *AppService) SetPriority(todoID int64, priority models.Priority) error {
 	err = s.todoRepo.Update(todo)
 	if err != nil {
 		log.Error("Failed to set priority", "error", err, "todoID", todoID, "priority", priority)
+		return fmt.Errorf("error.update_failed")
+	}
+
+	return nil
+}
+
+// Time tracking methods
+func (s *AppService) GetTotalTimeSpent(todoID int64) (time.Duration, error) {
+	todo, err := s.todoRepo.GetByID(todoID)
+	if err != nil {
+		log.Error("Failed to fetch todo for time tracking", "error", err, "id", todoID)
+		return 0, fmt.Errorf("error.todos_not_found")
+	}
+
+	// Get the base time spent
+	totalSeconds := todo.TimeSpent
+
+	// If currently in "Doing" status, add the current session time
+	if todo.Status == models.Doing && todo.TimeStarted != nil {
+		currentSessionSeconds := int64(time.Since(*todo.TimeStarted).Seconds())
+		totalSeconds += currentSessionSeconds
+	}
+
+	return time.Duration(totalSeconds) * time.Second, nil
+}
+
+// PauseTimeTracking pauses time tracking without changing the status
+func (s *AppService) PauseTimeTracking(todoID int64) error {
+	todo, err := s.todoRepo.GetByID(todoID)
+	if err != nil {
+		log.Error("Failed to fetch todo for pausing time tracking", "error", err, "id", todoID)
+		return fmt.Errorf("error.todos_not_found")
+	}
+
+	// Only process if the task is in Doing status and has a start time
+	if todo.Status == models.Doing && todo.TimeStarted != nil {
+		elapsed := time.Since(*todo.TimeStarted).Seconds()
+		todo.TimeSpent += int64(elapsed)
+		todo.TimeStarted = nil // Clear the start time but keep status
+
+		err = s.todoRepo.Update(todo)
+		if err != nil {
+			log.Error("Failed to pause time tracking", "error", err, "todoID", todoID)
+			return fmt.Errorf("error.update_failed")
+		}
+	}
+
+	return nil
+}
+
+// ResumeTimeTracking resumes time tracking without changing the status
+func (s *AppService) ResumeTimeTracking(todoID int64) error {
+	todo, err := s.todoRepo.GetByID(todoID)
+	if err != nil {
+		log.Error("Failed to fetch todo for resuming time tracking", "error", err, "id", todoID)
+		return fmt.Errorf("error.todos_not_found")
+	}
+
+	// Only resume if the task is in Doing status but doesn't have a start time
+	if todo.Status == models.Doing && todo.TimeStarted == nil {
+		now := time.Now()
+		todo.TimeStarted = &now
+
+		err = s.todoRepo.Update(todo)
+		if err != nil {
+			log.Error("Failed to resume time tracking", "error", err, "todoID", todoID)
+			return fmt.Errorf("error.update_failed")
+		}
+	}
+
+	return nil
+}
+
+// ResetTimeTracking resets all time tracking data for a todo
+func (s *AppService) ResetTimeTracking(todoID int64) error {
+	todo, err := s.todoRepo.GetByID(todoID)
+	if err != nil {
+		log.Error("Failed to fetch todo for resetting time tracking", "error", err, "id", todoID)
+		return fmt.Errorf("error.todos_not_found")
+	}
+
+	todo.TimeSpent = 0
+	todo.TimeStarted = nil
+
+	err = s.todoRepo.Update(todo)
+	if err != nil {
+		log.Error("Failed to reset time tracking", "error", err, "todoID", todoID)
 		return fmt.Errorf("error.update_failed")
 	}
 

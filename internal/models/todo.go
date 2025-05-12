@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/martijnspitter/tui-todo/internal/theme"
+	"github.com/martijnspitter/tui-todo/internal/utils"
 )
 
 type Status int
@@ -96,4 +97,29 @@ type Todo struct {
 	Priority    Priority
 	Tags        []string
 	Archived    bool
+	TimeSpent   int64      // Total time spent in seconds
+	TimeStarted *time.Time // When the task was last set to Doing status
+}
+
+// FormatTimeSpent returns a human-readable format of the time spent on this todo
+func (t *Todo) FormatTimeSpent() string {
+	// Calculate total seconds including current session
+	totalSeconds := t.GetTotalSeconds()
+
+	return utils.FormatTime(totalSeconds)
+}
+
+// IsCurrentlyTracking returns whether this todo is actively tracking time
+func (t *Todo) isCurrentlyTracking() bool {
+	return t.Status == Doing && t.TimeStarted != nil
+}
+
+// GetTotalSeconds returns the total seconds spent including any current tracking session
+func (t *Todo) GetTotalSeconds() int64 {
+	if !t.isCurrentlyTracking() {
+		return t.TimeSpent
+	}
+
+	currentSessionSeconds := int64(time.Since(*t.TimeStarted).Seconds())
+	return t.TimeSpent + currentSessionSeconds
 }

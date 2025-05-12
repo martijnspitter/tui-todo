@@ -33,6 +33,7 @@ type TodayDashboardModel struct {
 	// Stats
 	completedTasksCount int
 	totalTasksCount     int
+	formattedTimeSpent  string
 
 	// Currently selected section and item
 	activeSection         int
@@ -132,12 +133,16 @@ func (m *TodayDashboardModel) renderDashboard() string {
 	// Progress bar and overview
 	overviewTitle := styling.TextStyle.Bold(true).Render(m.translator.T("today_overview_title"))
 	progressBar := m.renderProgressBar()
+	timeSpentText := m.translator.Tf("ui.t_time_spent", map[string]interface{}{"Time": m.formattedTimeSpent})
+	timeSpent := styling.GetTimeSpend(timeSpentText)
 
 	overviewContent := lipgloss.JoinVertical(
 		lipgloss.Center,
 		overviewTitle,
 		"",
 		progressBar,
+		"",
+		timeSpent,
 	)
 
 	overviewBox := lipgloss.NewStyle().
@@ -400,7 +405,7 @@ type GetCompletionStats struct{}
 // ===========================================================================
 func (m *TodayDashboardModel) GetCompletionStatsCmd() tea.Cmd {
 	return func() tea.Msg {
-		m.completedTasksCount, m.totalTasksCount = m.service.GetTodayCompletionStats()
+		m.completedTasksCount, m.totalTasksCount, m.formattedTimeSpent = m.service.GetTodayCompletionStats()
 		return TodayDataUpdatedMsg{}
 	}
 }
@@ -408,7 +413,7 @@ func (m *TodayDashboardModel) GetCompletionStatsCmd() tea.Cmd {
 func (m *TodayDashboardModel) GetTodayDataCmd() tea.Cmd {
 	return func() tea.Msg {
 		var err error
-		m.completedTasksCount, m.totalTasksCount = m.service.GetTodayCompletionStats()
+		m.completedTasksCount, m.totalTasksCount, m.formattedTimeSpent = m.service.GetTodayCompletionStats()
 		m.highPriorityTasks, m.dueTodayTasks, m.inProgressTasks, m.overdueTasks, m.upcomingTasks, err = m.service.GetTodosForToday()
 
 		if err != nil {
