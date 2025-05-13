@@ -272,14 +272,14 @@ func (m *TodosModel) View() string {
 	headerHeight := lipgloss.Height(header)
 	footerHeight := lipgloss.Height(footer)
 
-	m.list.SetHeight(m.height - headerHeight - footerHeight - 4)
+	m.list.SetHeight(m.height - headerHeight - footerHeight - 3)
 
 	// Main list
 	listView := lipgloss.NewStyle().Width(m.width - 2).Padding(styling.Padding).Render(m.list.View())
 	if m.tuiService.CurrentView == service.TodayPane {
 		listView = m.today.View()
 	} else if len(m.list.Items()) == 0 {
-		listView = EmptyStateView(m.translator, m.width, m.height)
+		listView = EmptyStateView(m.translator, m.width, m.height-headerHeight-footerHeight-1)
 	}
 
 	padding := lipgloss.NewStyle().Padding(1, 1)
