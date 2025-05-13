@@ -75,7 +75,7 @@ func (m *TodayDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			// Update viewport size
 			m.viewport.Width = m.width
-			m.viewport.Height = m.height
+			m.viewport.Height = m.height + 1
 		}
 
 		// Update content if we have any
