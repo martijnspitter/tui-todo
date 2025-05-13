@@ -13,6 +13,7 @@ require (
 	github.com/rmhubbert/bubbletea-overlay v0.3.2
 	golang.org/x/text v0.25.0
 	modernc.org/sqlite v1.37.0
+	pgregory.net/rapid v1.2.0
 )
 
 require (

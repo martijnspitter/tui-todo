@@ -8,6 +8,7 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/repository"
 	"github.com/martijnspitter/tui-todo/internal/service"
+	"pgregory.net/rapid"
 )
 
 // MockTodoRepository implements repository.TodoRepository for testing
@@ -1674,4 +1675,352 @@ func TestUpdateInfoMethods(t *testing.T) {
 			t.Errorf("Expected new updateInfo to have HasUpdate and ForceUpdate set to false")
 		}
 	})
+}
+
+func TestGetTotalTimeSpent(t *testing.T) {
+	tests := []struct {
+		name         string
+		todoID       int64
+		mockTodo     *models.Todo
+		mockError    error
+		wantError    bool
+		wantDuration time.Duration
+	}{
+		{
+			name:   "successful retrieval with time spent",
+			todoID: 1,
+			mockTodo: &models.Todo{
+				ID:          1,
+				TimeSpent:   3600, // 1 hour in seconds
+				TimeStarted: nil,  // Not currently tracking
+			},
+			mockError:    nil,
+			wantError:    false,
+			wantDuration: 3600 * time.Second,
+		},
+		{
+			name:   "active tracking adds elapsed time",
+			todoID: 2,
+			mockTodo: func() *models.Todo {
+				startTime := time.Now().Add(-10 * time.Minute)
+				return &models.Todo{
+					ID:          2,
+					TimeSpent:   1800, // 30 minutes in seconds
+					Status:      models.Doing,
+					TimeStarted: &startTime,
+				}
+			}(),
+			mockError:    nil,
+			wantError:    false,
+			wantDuration: 1800*time.Second + 10*time.Minute, // Base + ~10 minutes tracking
+		},
+		{
+			name:         "repository error",
+			todoID:       3,
+			mockTodo:     nil,
+			mockError:    errors.New("database error"),
+			wantError:    true,
+			wantDuration: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// For the active tracking test, we need to calculate the expected time dynamically
+			var expectedDuration time.Duration = tt.wantDuration
+			if tt.mockTodo != nil && tt.mockTodo.TimeStarted != nil && tt.mockTodo.Status == models.Doing {
+				baseTime := time.Duration(tt.mockTodo.TimeSpent) * time.Second
+				elapsed := time.Since(*tt.mockTodo.TimeStarted)
+				expectedDuration = baseTime + elapsed
+			}
+
+			mockRepo := &MockTodoRepository{
+				MockTodo:  tt.mockTodo,
+				MockError: tt.mockError,
+			}
+
+			service := service.NewAppService(mockRepo)
+			duration, err := service.GetTotalTimeSpent(tt.todoID)
+
+			// Check error
+			if (err != nil) != tt.wantError {
+				t.Errorf("GetTotalTimeSpent() error = %v, wantError %v", err, tt.wantError)
+				return
+			}
+
+			// For active tracking, we can't predict the exact elapsed time
+			if tt.mockTodo != nil && tt.mockTodo.TimeStarted != nil && tt.mockTodo.Status == models.Doing {
+				// Allow a small tolerance of 2 seconds for test execution time
+				tolerance := 2 * time.Second
+				diff := duration - expectedDuration
+				if diff < -tolerance || diff > tolerance {
+					t.Errorf("GetTotalTimeSpent() = %v, want approximately %v (diff: %v)",
+						duration, expectedDuration, diff)
+				}
+			} else if duration != tt.wantDuration {
+				t.Errorf("GetTotalTimeSpent() = %v, want %v", duration, tt.wantDuration)
+			}
+		})
+	}
+}
+
+func TestTimeTrackingMethods(t *testing.T) {
+	testCases := []struct {
+		name              string
+		methodName        string
+		todoID            int64
+		initialTodo       *models.Todo
+		mockError         error
+		wantError         bool
+		checkUpdatedState func(*testing.T, *models.Todo)
+	}{
+		{
+			name:       "pause tracking - success",
+			methodName: "PauseTimeTracking",
+			todoID:     1,
+			initialTodo: func() *models.Todo {
+				startTime := time.Now().Add(-20 * time.Minute)
+				return &models.Todo{
+					ID:          1,
+					Title:       "Test Todo",
+					TimeSpent:   1800, // 30 minutes
+					Status:      models.Doing,
+					TimeStarted: &startTime,
+				}
+			}(),
+			mockError: nil,
+			wantError: false,
+			checkUpdatedState: func(t *testing.T, todo *models.Todo) {
+				if todo.Status != models.Doing {
+					t.Errorf("Todo status should remain %v, got %v", models.Doing, todo.Status)
+				}
+				if todo.TimeStarted != nil {
+					t.Errorf("TimeStarted should be nil after pausing, got %v", todo.TimeStarted)
+				}
+				// Time spent should have increased by approximately 20 minutes
+				expectedMin := 1800 + 20*60 - 5 // Allow 5 seconds tolerance
+				expectedMax := 1800 + 20*60 + 5
+				if todo.TimeSpent < int64(expectedMin) || todo.TimeSpent > int64(expectedMax) {
+					t.Errorf("TimeSpent = %v, want approximately %v", todo.TimeSpent, 1800+20*60)
+				}
+			},
+		},
+		{
+			name:       "pause tracking - not tracking",
+			methodName: "PauseTimeTracking",
+			todoID:     2,
+			initialTodo: &models.Todo{
+				ID:          2,
+				Title:       "Not Tracking Todo",
+				TimeSpent:   600,
+				Status:      models.Doing,
+				TimeStarted: nil,
+			},
+			mockError: nil,
+			wantError: false,
+			checkUpdatedState: func(t *testing.T, todo *models.Todo) {
+				if todo.TimeStarted != nil {
+					t.Errorf("TimeStarted should remain nil")
+				}
+				if todo.TimeSpent != 600 {
+					t.Errorf("TimeSpent should not change, got %v, want %v", todo.TimeSpent, 600)
+				}
+			},
+		},
+		{
+			name:        "pause tracking - error",
+			methodName:  "PauseTimeTracking",
+			todoID:      3,
+			initialTodo: nil,
+			mockError:   errors.New("database error"),
+			wantError:   true,
+			checkUpdatedState: func(t *testing.T, todo *models.Todo) {
+				// No state to check with error
+			},
+		},
+		{
+			name:       "resume tracking - success",
+			methodName: "ResumeTimeTracking",
+			todoID:     4,
+			initialTodo: &models.Todo{
+				ID:          4,
+				Title:       "Paused Todo",
+				TimeSpent:   900,
+				Status:      models.Doing,
+				TimeStarted: nil,
+			},
+			mockError: nil,
+			wantError: false,
+			checkUpdatedState: func(t *testing.T, todo *models.Todo) {
+				if todo.TimeStarted == nil {
+					t.Errorf("TimeStarted should be set after resuming")
+				} else {
+					// Start time should be set to approximately now
+					now := time.Now()
+					startTime := *todo.TimeStarted
+					diff := now.Sub(startTime).Seconds()
+					if diff < -2 || diff > 2 { // Allow 2 seconds tolerance
+						t.Errorf("TimeStarted = %v, want approximately %v (diff: %.2f seconds)",
+							startTime, now, diff)
+					}
+				}
+				if todo.TimeSpent != 900 {
+					t.Errorf("TimeSpent should remain unchanged, got %v, want %v", todo.TimeSpent, 900)
+				}
+			},
+		},
+		{
+			name:       "resume tracking - already tracking",
+			methodName: "ResumeTimeTracking",
+			todoID:     5,
+			initialTodo: func() *models.Todo {
+				startTime := time.Now().Add(-5 * time.Minute)
+				return &models.Todo{
+					ID:          5,
+					Title:       "Already Tracking Todo",
+					TimeSpent:   300,
+					Status:      models.Doing,
+					TimeStarted: &startTime,
+				}
+			}(),
+			mockError: nil,
+			wantError: false,
+			checkUpdatedState: func(t *testing.T, todo *models.Todo) {
+				if todo.TimeStarted == nil {
+					t.Errorf("TimeStarted should remain set")
+				}
+				// State should remain unchanged
+				if todo.TimeSpent != 300 {
+					t.Errorf("TimeSpent should not change, got %v, want %v", todo.TimeSpent, 300)
+				}
+			},
+		},
+		{
+			name:       "reset tracking - success",
+			methodName: "ResetTimeTracking",
+			todoID:     6,
+			initialTodo: func() *models.Todo {
+				startTime := time.Now().Add(-30 * time.Minute)
+				return &models.Todo{
+					ID:          6,
+					Title:       "Track Reset Todo",
+					TimeSpent:   7200,
+					Status:      models.Doing,
+					TimeStarted: &startTime,
+				}
+			}(),
+			mockError: nil,
+			wantError: false,
+			checkUpdatedState: func(t *testing.T, todo *models.Todo) {
+				if todo.TimeStarted != nil {
+					t.Errorf("TimeStarted should be nil after reset, got %v", todo.TimeStarted)
+				}
+				if todo.TimeSpent != 0 {
+					t.Errorf("TimeSpent should be reset to 0, got %v", todo.TimeSpent)
+				}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create a copy of the initial todo to avoid modifying the test data
+			var initialTodoCopy *models.Todo
+			if tc.initialTodo != nil {
+				todoCopy := *tc.initialTodo
+				initialTodoCopy = &todoCopy
+			}
+
+			mockRepo := &MockTodoRepository{
+				MockTodo:  initialTodoCopy,
+				MockError: tc.mockError,
+			}
+
+			service := service.NewAppService(mockRepo)
+
+			var err error
+			switch tc.methodName {
+			case "PauseTimeTracking":
+				err = service.PauseTimeTracking(tc.todoID)
+			case "ResumeTimeTracking":
+				err = service.ResumeTimeTracking(tc.todoID)
+			case "ResetTimeTracking":
+				err = service.ResetTimeTracking(tc.todoID)
+			default:
+				t.Fatalf("Unknown method name: %s", tc.methodName)
+			}
+
+			// Check error
+			if (err != nil) != tc.wantError {
+				t.Errorf("%s() error = %v, wantError %v", tc.methodName, err, tc.wantError)
+				return
+			}
+
+			// If no error and we updated a todo, check the state
+			if err == nil && tc.initialTodo != nil {
+				var updatedTodo *models.Todo
+				if len(mockRepo.UpdatedTodos) > 0 {
+					updatedTodo = mockRepo.UpdatedTodos[0]
+				} else {
+					updatedTodo = tc.initialTodo
+				}
+				tc.checkUpdatedState(t, updatedTodo)
+			}
+		})
+	}
+}
+
+func TestTimeTrackingProperties(t *testing.T) {
+	t.Run("pause_tracking_properties", rapid.MakeCheck(func(t *rapid.T) {
+		// Generate a todo with random time spent
+		initialTimeSpent := rapid.Int64Range(0, 36000).Draw(t, "initialTimeSpent")
+
+		// Random start time between 1 minute and 2 hours ago
+		minMinutesAgo := rapid.IntRange(1, 120).Draw(t, "minutesAgo")
+		startTime := time.Now().Add(-time.Duration(minMinutesAgo) * time.Minute)
+
+		initialTodo := &models.Todo{
+			ID:          1,
+			TimeSpent:   initialTimeSpent,
+			Status:      models.Doing,
+			TimeStarted: &startTime,
+		}
+
+		// Create a copy for testing
+		todoCopy := *initialTodo
+		mockRepo := &MockTodoRepository{
+			MockTodo: &todoCopy,
+		}
+
+		service := service.NewAppService(mockRepo)
+		err := service.PauseTimeTracking(1)
+
+		// Properties to verify:
+		// 1. No error should occur
+		if err != nil {
+			t.Fatalf("PauseTimeTracking() unexpected error: %v", err)
+		}
+
+		// 2. Todo should have updated state
+		if len(mockRepo.UpdatedTodos) == 0 {
+			t.Fatalf("Expected todo to be updated")
+		}
+
+		updatedTodo := mockRepo.UpdatedTodos[0]
+
+		// 3. TimeStarted should be nil
+		if updatedTodo.TimeStarted != nil {
+			t.Errorf("TimeStarted should be nil after pausing, got %v", updatedTodo.TimeStarted)
+		}
+
+		// 4. Time spent should increase by approximately elapsed time
+		expectedElapsed := int64(time.Since(startTime).Seconds())
+		expectedTimeSpent := initialTimeSpent + expectedElapsed
+
+		// Allow 2 seconds tolerance for test execution time
+		if updatedTodo.TimeSpent < expectedTimeSpent-2 || updatedTodo.TimeSpent > expectedTimeSpent+2 {
+			t.Errorf("TimeSpent = %v, expected approximately %v (initial: %v + elapsed: %v)",
+				updatedTodo.TimeSpent, expectedTimeSpent, initialTimeSpent, expectedElapsed)
+		}
+	}))
 }

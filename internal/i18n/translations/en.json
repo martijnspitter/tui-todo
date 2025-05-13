@@ -85,6 +85,8 @@
   "help.i": "About",
   "ui.updated": "Updated: {{.Time}}",
   "ui.due": "Due: {{.Time}}",
+  "ui.time_spent": "Time spent: {{.Time}}",
+  "ui.t_time_spent": "Total time spent on todos today: {{.Time}}",
   "ui.error.invalid_date": "Invalid due date format",
   "ui.error.add_tag": "Could not add tag: {{.TagName}}",
   "error.todos_not_found": "Todos not found",
@@ -103,5 +105,7 @@
   "error.network": "Network error",
   "error.validation": "Validation failed: {{.Reason}}",
   "error.unknown": "An unexpected error occurred",
-  "error.update_from_done": "Cannot advance status further"
+  "error.update_from_done": "Cannot advance status further",
+  "feedback.no_todos": "No Todos left.",
+  "feedback.mission_accomplished": "Mission Accomplished!"
 }

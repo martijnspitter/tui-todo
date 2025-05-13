@@ -253,9 +253,15 @@ func (m *TodoEditModal) View() string {
 		updatedAt = fmt.Sprintf("%s\n%s", updatedAtHeader, updatedAtField)
 	}
 
-	header := m.translator.Tf("modal.edit_todo", map[string]interface{}{"ID": m.todo.ID})
-	if m.todo.ID == 0 {
-		header = m.translator.T("modal.new_todo")
+	header := m.translator.T("modal.new_todo")
+	if m.todo.ID != 0 {
+		text := m.translator.Tf("modal.edit_todo", map[string]interface{}{"ID": m.todo.ID})
+		timeSpendText := m.translator.Tf("ui.time_spent", map[string]interface{}{"Time": m.todo.FormatTimeSpent()})
+		timeSpend := styling.GetTimeSpend(timeSpendText)
+
+		remainder := m.width/2 - lipgloss.Width(text) - lipgloss.Width(timeSpend) + 8
+
+		header = lipgloss.JoinHorizontal(lipgloss.Left, styling.TextStyle.Width(remainder).Align(lipgloss.Left).Render(text), timeSpend)
 	}
 
 	help := m.help.View()

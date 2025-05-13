@@ -15,6 +15,7 @@ var (
 	RowStyle     = lipgloss.NewStyle().Background(theme.BlackColor)
 	TextStyle    = lipgloss.NewStyle().Foreground(theme.TextColor)
 	SubtextStyle = lipgloss.NewStyle().Foreground(theme.SubtextColor)
+	EmptyStyle   = lipgloss.NewStyle().Foreground(theme.Green)
 
 	BorderWidth = 1
 	Padding     = 1
@@ -137,6 +138,18 @@ func GetStyledDueDate(text string, priority models.Priority) string {
 		Padding(0, 1).
 		Align(lipgloss.Center).
 		MarginRight(1)
+
+	width := lipgloss.Width(text) + 2
+
+	return textStyle.Width(width).Render(text)
+}
+
+func GetTimeSpend(text string) string {
+	textStyle := lipgloss.NewStyle().
+		Foreground(theme.Teal).
+		Background(theme.BackgroundColor).
+		Padding(0, 1).
+		Align(lipgloss.Center)
 
 	width := lipgloss.Width(text) + 2
 

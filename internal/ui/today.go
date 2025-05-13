@@ -33,6 +33,7 @@ type TodayDashboardModel struct {
 	// Stats
 	completedTasksCount int
 	totalTasksCount     int
+	formattedTimeSpent  string
 
 	// Currently selected section and item
 	activeSection         int
@@ -99,15 +100,6 @@ func (m *TodayDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m *TodayDashboardModel) View() string {
 	if !m.ready {
-		return "Initializing..."
-	}
-
-	// If no data is loaded yet, show loading state
-	if len(m.highPriorityTasks) == 0 &&
-		len(m.dueTodayTasks) == 0 &&
-		len(m.inProgressTasks) == 0 &&
-		len(m.overdueTasks) == 0 &&
-		len(m.upcomingTasks) == 0 {
 		return m.loadingView()
 	}
 
@@ -128,23 +120,58 @@ func (m *TodayDashboardModel) renderDashboard() string {
 	modalMaxWidth := 150
 	modalWidth := min(m.width-10, modalMaxWidth)
 	contentWidth := modalWidth - 6 // Account for padding
+	mainBox := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(theme.Mauve).
+		Padding(1, 2).
+		Width(modalWidth)
 
 	// Progress bar and overview
 	overviewTitle := styling.TextStyle.Bold(true).Render(m.translator.T("today_overview_title"))
 	progressBar := m.renderProgressBar()
+
+	timeSpentText := m.translator.Tf("ui.t_time_spent", map[string]interface{}{"Time": m.formattedTimeSpent})
+	timeSpent := styling.GetTimeSpend(timeSpentText)
 
 	overviewContent := lipgloss.JoinVertical(
 		lipgloss.Center,
 		overviewTitle,
 		"",
 		progressBar,
+		"",
+		timeSpent,
 	)
-
 	overviewBox := lipgloss.NewStyle().
 		Width(contentWidth).
 		Align(lipgloss.Center).
 		MarginBottom(1).
 		Render(overviewContent)
+
+	// If no data is loaded yet, show loading state
+	if m.allTodosEmpty() {
+		emptyBox := lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(theme.Green).
+			Padding(1, 2).
+			Width(contentWidth).
+			Render(lipgloss.JoinVertical(
+				lipgloss.Left,
+				EmptyStateView(m.translator, contentWidth, 13),
+			))
+		content := lipgloss.JoinVertical(
+			lipgloss.Left,
+			overviewBox,
+			emptyBox,
+		)
+
+		return lipgloss.Place(
+			m.width,
+			m.height,
+			lipgloss.Center,
+			lipgloss.Center,
+			mainBox.Render(content),
+		)
+	}
 
 	// High Priority Tasks Section
 	highPrioTitle := styling.TextStyle.
@@ -276,20 +303,13 @@ func (m *TodayDashboardModel) renderDashboard() string {
 		sections...,
 	)
 
-	mainBox := lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(theme.Mauve).
-		Padding(1, 2).
-		Width(modalWidth).
-		Render(dashboardContent)
-
 	// Return content for viewport
 	return lipgloss.Place(
 		m.width,
 		m.height,
 		lipgloss.Center,
 		lipgloss.Center,
-		mainBox,
+		mainBox.Render(dashboardContent),
 	)
 }
 
@@ -386,6 +406,14 @@ func (m *TodayDashboardModel) renderProgressBar() string {
 
 }
 
+func (m *TodayDashboardModel) allTodosEmpty() bool {
+	return len(m.highPriorityTasks) == 0 &&
+		len(m.dueTodayTasks) == 0 &&
+		len(m.inProgressTasks) == 0 &&
+		len(m.overdueTasks) == 0 &&
+		len(m.upcomingTasks) == 0
+}
+
 // ===========================================================================
 // Messages
 // ===========================================================================
@@ -400,7 +428,7 @@ type GetCompletionStats struct{}
 // ===========================================================================
 func (m *TodayDashboardModel) GetCompletionStatsCmd() tea.Cmd {
 	return func() tea.Msg {
-		m.completedTasksCount, m.totalTasksCount = m.service.GetTodayCompletionStats()
+		m.completedTasksCount, m.totalTasksCount, m.formattedTimeSpent = m.service.GetTodayCompletionStats()
 		return TodayDataUpdatedMsg{}
 	}
 }
@@ -408,7 +436,7 @@ func (m *TodayDashboardModel) GetCompletionStatsCmd() tea.Cmd {
 func (m *TodayDashboardModel) GetTodayDataCmd() tea.Cmd {
 	return func() tea.Msg {
 		var err error
-		m.completedTasksCount, m.totalTasksCount = m.service.GetTodayCompletionStats()
+		m.completedTasksCount, m.totalTasksCount, m.formattedTimeSpent = m.service.GetTodayCompletionStats()
 		m.highPriorityTasks, m.dueTodayTasks, m.inProgressTasks, m.overdueTasks, m.upcomingTasks, err = m.service.GetTodosForToday()
 
 		if err != nil {
