@@ -103,5 +103,7 @@
   "error.network": "Network error",
   "error.validation": "Validation failed: {{.Reason}}",
   "error.unknown": "An unexpected error occurred",
-  "error.update_from_done": "Cannot advance status further"
+  "error.update_from_done": "Cannot advance status further",
+  "feedback.no_todos": "No Todos left.",
+  "feedback.mission_accomplished": "Mission Accomplished!"
 }
