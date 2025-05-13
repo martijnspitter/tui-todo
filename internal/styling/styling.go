@@ -144,6 +144,18 @@ func GetStyledDueDate(text string, priority models.Priority) string {
 	return textStyle.Width(width).Render(text)
 }
 
+func GetTimeSpend(text string) string {
+	textStyle := lipgloss.NewStyle().
+		Foreground(theme.Teal).
+		Background(theme.BackgroundColor).
+		Padding(0, 1).
+		Align(lipgloss.Center)
+
+	width := lipgloss.Width(text) + 2
+
+	return textStyle.Width(width).Render(text)
+}
+
 func GetStyledTag(tag string) string {
 	textStyle := lipgloss.NewStyle().
 		Foreground(theme.BlackColor).

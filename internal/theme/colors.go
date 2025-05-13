@@ -17,6 +17,7 @@ var (
 	Yellow    = lipgloss.Color("#f9e2af")
 	Lavender  = lipgloss.Color("#b4befe")
 	Rosewater = lipgloss.Color("#f2cdcd")
+  Teal      = lipgloss.Color("#8bd5ca")
 	Green     = lipgloss.Color("#a6da95")
 
 	ArchivedStatusColor = lipgloss.Color("#9399b2")
