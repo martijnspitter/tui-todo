@@ -22,6 +22,7 @@ type TodayDashboardModel struct {
 
 	viewport viewport.Model
 	ready    bool
+	loaded   bool
 
 	// Section data
 	highPriorityTasks []*models.Todo
@@ -45,6 +46,7 @@ func NewTodayModel(service *service.AppService, tuiService *service.TuiService, 
 		service:    service,
 		tuiService: tuiService,
 		translator: translator,
+		loaded:     true,
 	}
 }
 
@@ -99,7 +101,7 @@ func (m *TodayDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *TodayDashboardModel) View() string {
-	if !m.ready {
+	if !m.ready || !m.loaded {
 		return m.loadingView()
 	}
 
@@ -443,6 +445,12 @@ func (m *TodayDashboardModel) GetTodayDataCmd() tea.Cmd {
 			return TodoErrorMsg{err: err}
 		}
 
+		return TodayDataUpdatedMsg{}
+	}
+}
+
+func (m *TodayDashboardModel) TodayDataUpdatedCmd() tea.Cmd {
+	return func() tea.Msg {
 		return TodayDataUpdatedMsg{}
 	}
 }
