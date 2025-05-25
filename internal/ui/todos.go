@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/log"
 
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
@@ -67,7 +68,8 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
 	switch msg := msg.(type) {
-	case InitMsg:
+	case LoadTodosMsg:
+		log.Debug("LOAD TODOS SYNC")
 		return m, m.loadTodosCmd()
 	case tea.KeyMsg:
 		if m.tuiService.ShouldShowModal() {
@@ -342,7 +344,7 @@ type UpdateCheckCompletedMsg struct {
 	ForceUpdate bool
 }
 
-type InitMsg struct{}
+type LoadTodosMsg struct{}
 
 // ===========================================================================
 // Commands
@@ -452,5 +454,5 @@ func (m *TodosModel) showAboutModalCmd() tea.Cmd {
 }
 
 func InitCmd() tea.Msg {
-	return InitMsg{}
+	return LoadTodosMsg{}
 }

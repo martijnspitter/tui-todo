@@ -1,6 +1,7 @@
 *debug.log
 *todo.sql
 *coverage.out
+*todo.sock
 release.sh
 # Added by goreleaser init:
 dist/
