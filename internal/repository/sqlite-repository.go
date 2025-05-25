@@ -375,6 +375,11 @@ func (r *SQLiteTodoRepository) GetCompleted() ([]*models.Todo, error) {
 	return r.GetAll(StatusFilter(models.Done), NotArchivedFilter())
 }
 
+// Get blocked todos
+func (r *SQLiteTodoRepository) GetBlocked() ([]*models.Todo, error) {
+	return r.GetAll(StatusFilter(models.Blocked), NotArchivedFilter())
+}
+
 // Get archived todos
 func (r *SQLiteTodoRepository) GetArchived() ([]*models.Todo, error) {
 	return r.GetAll(ArchivedFilter())

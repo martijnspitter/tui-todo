@@ -3,9 +3,10 @@ package theme
 import "github.com/charmbracelet/lipgloss"
 
 var (
-	OpenStatusColor  = lipgloss.Color("#f5e0dc")
-	DoingStatusColor = lipgloss.Color("#89b4fa")
-	DoneStatusColor  = lipgloss.Color("#a6e3a1")
+	OpenStatusColor    = lipgloss.Color("#f5e0dc")
+	DoingStatusColor   = lipgloss.Color("#89b4fa")
+	DoneStatusColor    = lipgloss.Color("#a6e3a1")
+	BlockedStatusColor = lipgloss.Color("#d20f39")
 
 	LowPriorityColor      = lipgloss.Color("#94e2d5")
 	MediumPriorityColor   = lipgloss.Color("#f0c6c6")
@@ -17,7 +18,7 @@ var (
 	Yellow    = lipgloss.Color("#f9e2af")
 	Lavender  = lipgloss.Color("#b4befe")
 	Rosewater = lipgloss.Color("#f2cdcd")
-  Teal      = lipgloss.Color("#8bd5ca")
+	Teal      = lipgloss.Color("#8bd5ca")
 	Green     = lipgloss.Color("#a6da95")
 
 	ArchivedStatusColor = lipgloss.Color("#9399b2")

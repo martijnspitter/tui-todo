@@ -18,6 +18,7 @@ type TodoRepository interface {
 	GetOpen() ([]*models.Todo, error)
 	GetActive() ([]*models.Todo, error)
 	GetCompleted() ([]*models.Todo, error)
+	GetBlocked() ([]*models.Todo, error)
 	Search(query string) ([]*models.Todo, error)
 
 	// tags

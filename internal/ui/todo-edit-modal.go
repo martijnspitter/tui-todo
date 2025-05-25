@@ -33,6 +33,7 @@ const (
 	editingStatusOpen
 	editingStatusDoing
 	editingStatusDone
+	editingStatusBlocked
 )
 
 // TodoEditModal allows viewing and editing todo details
@@ -133,6 +134,8 @@ func (m *TodoEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.status = models.Doing
 			case editingStatusDone:
 				m.status = models.Done
+			case editingStatusBlocked:
+				m.status = models.Blocked
 			}
 
 		case key.Matches(msg, m.tuiService.KeyMap.AdvanceStatus):
@@ -187,7 +190,7 @@ func (m *TodoEditModal) View() string {
 	prioritySection := lipgloss.JoinHorizontal(lipgloss.Center, priorityTabs...)
 
 	var statusTabs []string
-	for status := models.Open; status <= models.Done; status++ {
+	for status := models.Open; status <= models.Blocked; status++ {
 		selected := status == m.status
 		hovered := m.editState == editState(int(status)+9)
 		prefix := ""
@@ -305,10 +308,11 @@ func (m *TodoEditModal) goForward() {
 		m.dueDateInput.Focus()
 	case editingDueDate:
 		m.dueDateInput.Blur()
-	case editingStatusDone:
+	case editingStatusBlocked:
 		m.titleInput.Focus()
 	}
-	if m.editState == editingStatusDone {
+
+	if m.editState == editingStatusBlocked {
 		m.editState = 0
 	} else {
 		m.editState = m.editState + 1
@@ -333,7 +337,7 @@ func (m *TodoEditModal) goBack() {
 	}
 
 	if m.editState == editingTitle {
-		m.editState = editingStatusDone
+		m.editState = editingStatusBlocked
 	} else {
 		m.editState = m.editState - 1
 	}

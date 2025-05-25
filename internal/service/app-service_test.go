@@ -90,6 +90,13 @@ func (m *MockTodoRepository) GetCompleted() ([]*models.Todo, error) {
 	return m.MockTodos, nil
 }
 
+func (m *MockTodoRepository) GetBlocked() ([]*models.Todo, error) {
+	if m.MockError != nil {
+		return nil, m.MockError
+	}
+	return m.MockTodos, nil
+}
+
 func (m *MockTodoRepository) GetArchived() ([]*models.Todo, error) {
 	if m.MockError != nil {
 		return nil, m.MockError

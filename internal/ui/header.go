@@ -50,7 +50,7 @@ func (m *HeaderModel) View() string {
 	todayTab := styling.GetStyledTagWithIndicator(1, m.translator.T("filter.today"), theme.Lavender, isTodaySelected, false, false)
 	leftTabs = append(leftTabs, todayTab)
 
-	for status := models.Open; status <= models.Done; status++ {
+	for status := models.Open; status <= models.Blocked; status++ {
 		isSelected := int(m.tuiService.CurrentView) == int(status)+2
 		translatedStatus := m.translator.T(status.String())
 		tab := styling.GetStyledStatus(translatedStatus, status, isSelected, false, false)
