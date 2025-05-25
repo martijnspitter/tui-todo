@@ -607,7 +607,14 @@ func (s *AppService) GetTodayCompletionStats() (completed int, total int, format
 		timeSpent += todo.GetTotalSeconds()
 	}
 
-	return len(completedToday), len(completedToday) + len(currentTodayTasks), utils.FormatTime(timeSpent)
+	activeToday := 0
+	for _, t := range currentTodayTasks {
+		if t.Status == models.Blocked {
+			continue
+		}
+		activeToday++
+	}
+	return len(completedToday), len(completedToday) + activeToday, utils.FormatTime(timeSpent)
 }
 
 // ===========================================================================

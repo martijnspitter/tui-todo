@@ -236,7 +236,7 @@ func (m *TodoEditModal) View() string {
 
 	// Status header
 	statusHeader := m.translator.T("field.status")
-	if m.editState == editingStatusOpen || m.editState == editingStatusDoing || m.editState == editingStatusDone {
+	if m.editState == editingStatusOpen || m.editState == editingStatusDoing || m.editState == editingStatusDone || m.editState == editingStatusBlocked {
 		statusHeader = styling.FocusedStyle.Render(statusHeader)
 	}
 
