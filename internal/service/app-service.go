@@ -660,5 +660,10 @@ func (s *AppService) OnNotification(notification socket_sync.Notification) {
 }
 
 func (s *AppService) notify(nt socket_sync.NotificationType, id int64) {
-	s.notify(nt, id)
+	if s.syncManager != nil {
+		if err := s.syncManager.NotifyChange(nt, id); err != nil {
+			log.Warn("Failed to notify other instances", "error", err)
+			// Continue anyway - don't fail the operation due to sync issues
+		}
+	}
 }
