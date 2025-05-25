@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -18,12 +19,13 @@ type Manager struct {
 	server        *Server
 	client        *Client
 	isPrimary     bool
-	started       bool
+	started       atomic.Bool
 	startMutex    sync.Mutex
-	stopped       bool
+	stopped       atomic.Bool
 	notifBuffer   []Notification // Buffer notifications during initialization
 	bufferMutex   sync.Mutex
 	lastPollTime  time.Time
+	pollMutex     sync.Mutex
 }
 
 // NewManager creates a new synchronization manager
@@ -52,7 +54,7 @@ func (m *Manager) Start() error {
 	m.startMutex.Lock()
 	defer m.startMutex.Unlock()
 
-	if m.started {
+	if m.started.Load() {
 		return nil // Already started
 	}
 
@@ -90,7 +92,7 @@ func (m *Manager) Start() error {
 		}
 	}
 
-	m.started = true
+	m.started.Store(true)
 
 	// Process any notifications that were buffered during initialization
 	m.processBufferedNotifications()
@@ -103,11 +105,9 @@ func (m *Manager) Stop() error {
 	m.startMutex.Lock()
 	defer m.startMutex.Unlock()
 
-	if !m.started || m.stopped {
+	if !m.started.Load() || m.stopped.Load() {
 		return nil // Already stopped or never started
 	}
-
-	log.Debug("Stopping sync manager")
 
 	var err error
 	if m.isPrimary && m.server != nil {
@@ -116,14 +116,26 @@ func (m *Manager) Stop() error {
 		err = m.client.Stop()
 	}
 
-	m.stopped = true
+	m.stopped.Store(true)
 	return err
 }
 
 // NotifyChange broadcasts a change notification to other instances
 func (m *Manager) NotifyChange(notificationType NotificationType, id int64) error {
-	if !m.started || m.stopped {
-		return nil // Not running, silently ignore
+	if m.stopped.Load() {
+		return nil // Already shut down
+	}
+
+	// If not yet started, buffer so we can replay after Start().
+	if !m.started.Load() {
+		m.bufferMutex.Lock()
+		m.notifBuffer = append(m.notifBuffer, Notification{
+			Type:      notificationType,
+			ID:        id,
+			Timestamp: time.Now(),
+		})
+		m.bufferMutex.Unlock()
+		return nil
 	}
 
 	notification := Notification{
@@ -173,11 +185,15 @@ func (m *Manager) IsPrimary() bool {
 
 // UpdatePollingTime updates the timestamp of the last polling operation
 func (m *Manager) UpdatePollingTime() {
+	m.pollMutex.Lock()
 	m.lastPollTime = time.Now()
+	m.pollMutex.Unlock()
 }
 
 // TimeSinceLastPoll returns the duration since the last polling operation
 func (m *Manager) TimeSinceLastPoll() time.Duration {
+	m.pollMutex.Lock()
+	defer m.pollMutex.Unlock()
 	return time.Since(m.lastPollTime)
 }
 

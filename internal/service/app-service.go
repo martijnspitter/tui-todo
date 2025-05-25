@@ -11,6 +11,7 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/repository"
 	"github.com/martijnspitter/tui-todo/internal/socket_sync"
 	"github.com/martijnspitter/tui-todo/internal/utils"
+	"slices"
 )
 
 type UpdateInfo struct {
@@ -651,11 +652,11 @@ func (s *AppService) RegisterNotificationCallback(callback NotificationCallback)
 
 func (s *AppService) OnNotification(notification socket_sync.Notification) {
 	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	callbacks := slices.Clone(s.notifCallbacks)
+	s.mutex.Unlock()
 
-	// Invoke all registered callbacks
-	for _, callback := range s.notifCallbacks {
-		callback(string(notification.Type), notification.ID)
+	for _, cb := range callbacks {
+		cb(string(notification.Type), notification.ID)
 	}
 }
 

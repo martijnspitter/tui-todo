@@ -61,7 +61,7 @@ func CleanupSocket(socketPath string) error {
 	_, err := os.Stat(socketPath)
 	if err == nil {
 		// Socket file exists, try to connect to test if it's active
-		conn, err := net.Dial(DefaultProtocol, socketPath)
+		conn, err := net.DialTimeout(DefaultProtocol, socketPath, 2*time.Second)
 		if err != nil {
 			// Can't connect, so it's stale - remove it
 			if err := os.Remove(socketPath); err != nil {

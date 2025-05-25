@@ -66,7 +66,7 @@ func (c *Client) connect() error {
 	}
 
 	// Connect to the socket
-	conn, err := net.Dial(DefaultProtocol, c.socketPath)
+	conn, err := net.DialTimeout(DefaultProtocol, c.socketPath, 2*time.Second)
 	if err != nil {
 		return &SocketError{Op: "connect", Err: err}
 	}

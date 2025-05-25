@@ -140,9 +140,8 @@ func (s *Server) acceptLoop() {
 			// Accept a new connection
 			conn, err := s.listener.Accept()
 			if err != nil {
-				if os.IsTimeout(err) {
-					// This is just our deadline, continue
-					continue
+				if ne, ok := err.(net.Error); ok && ne.Timeout() {
+					continue // accept deadline reached
 				}
 				if IsSocketClosed(err) {
 					// Socket was closed, probably during shutdown
@@ -231,10 +230,6 @@ func (s *Server) handleClient(clientID string, conn net.Conn) {
 
 // Broadcast sends a notification to all connected clients
 func (s *Server) Broadcast(notification Notification) error {
-	// Prevent concurrent broadcasts which could interleave messages
-	s.broadcastLock.Lock()
-	defer s.broadcastLock.Unlock()
-
 	// First notify our own listener
 	s.notifListener.OnNotification(notification)
 
@@ -259,9 +254,11 @@ func (s *Server) broadcastToOthers(notification Notification, senderID string) e
 		}
 
 		if err := WriteMessage(conn, notification); err != nil {
-			log.Error("Failed to send to client", "id", id, "error", err)
-			lastErr = err
-			// We continue trying other clients despite errors
+			// Remove dead client to prevent noisy logs & leaks
+			go func(c net.Conn, clientID string) {
+				c.Close()
+				s.removeClient(clientID)
+			}(conn, id)
 		}
 	}
 
