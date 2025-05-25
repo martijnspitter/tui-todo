@@ -254,6 +254,9 @@ func (s *Server) broadcastToOthers(notification Notification, senderID string) e
 		}
 
 		if err := WriteMessage(conn, notification); err != nil {
+			if lastErr == nil {
+				lastErr = fmt.Errorf("failed to send message to client %s: %w", id, err)
+			}
 			// Remove dead client to prevent noisy logs & leaks
 			go func(c net.Conn, clientID string) {
 				c.Close()
