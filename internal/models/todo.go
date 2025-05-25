@@ -18,6 +18,8 @@ func (s Status) String() string {
 		return "status.doing"
 	case Done:
 		return "status.done"
+	case Blocked:
+		return "status.blocked"
 	default:
 		return "status.unknown"
 	}
@@ -31,6 +33,8 @@ func (s Status) Color() lipgloss.Color {
 		return theme.DoingStatusColor
 	case Done:
 		return theme.DoneStatusColor
+	case Blocked:
+		return theme.BlockedStatusColor
 	default:
 		return theme.OpenStatusColor
 	}
@@ -40,6 +44,7 @@ const (
 	Open Status = iota
 	Doing
 	Done
+	Blocked
 )
 
 type Priority int

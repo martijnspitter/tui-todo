@@ -61,8 +61,13 @@ func TestSwitchPane(t *testing.T) {
 			expectedView: service.DonePane,
 		},
 		{
-			name:         "Switch to All pane",
+			name:         "Switch to Blocked pane",
 			key:          "5",
+			expectedView: service.BlockedPane,
+		},
+		{
+			name:         "Switch to All pane",
+			key:          "6",
 			expectedView: service.AllPane,
 		},
 		{

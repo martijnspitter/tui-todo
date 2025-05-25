@@ -11,6 +11,7 @@ const (
 	OpenPane
 	DoingPane
 	DonePane
+	BlockedPane
 	AllPane
 	AddEditModal
 	ConfirmDeleteModal
@@ -62,6 +63,8 @@ func (t *TuiService) SwitchPane(key string) {
 	case "4":
 		t.CurrentView = DonePane
 	case "5":
+		t.CurrentView = BlockedPane
+	case "6":
 		t.CurrentView = AllPane
 	}
 }
@@ -127,7 +130,7 @@ func (t *TuiService) ToggleArchivedInAllView() {
 }
 
 func (t *TuiService) isPrevViewATab() bool {
-	return t.PrevView == TodayPane || t.PrevView == OpenPane || t.PrevView == DoingPane || t.PrevView == DonePane || t.PrevView == AllPane
+	return t.PrevView == TodayPane || t.PrevView == OpenPane || t.PrevView == DoingPane || t.PrevView == DonePane || t.PrevView == AllPane || t.PrevView == BlockedPane
 }
 
 var (

@@ -50,6 +50,10 @@ func (s *AppService) SetSyncManager(manager *socket_sync.Manager) {
 // ===========================================================================
 // Todo Methods
 // ===========================================================================
+//
+// ===========================================================================
+// Updates
+// ===========================================================================
 func (s *AppService) SaveTodo(todo *models.Todo, tags []string) error {
 	// Service decides whether to create or update based on ID or other criteria
 	if todo.ID == 0 {
@@ -98,30 +102,6 @@ func (s *AppService) CreateTodo(title, description string, priority models.Prior
 	return nil
 }
 
-func (s *AppService) GetAllTodos(showArchived bool) ([]*models.Todo, error) {
-	archivedFilter := repository.NotArchivedFilter()
-	if showArchived {
-		archivedFilter = repository.ArchivedFilter()
-	}
-	todos, err := s.todoRepo.GetAll(archivedFilter)
-	if err != nil {
-		log.Error("Failed to fetch todos", "error", err)
-		return nil, fmt.Errorf("error.todos_not_found")
-	}
-
-	return sortTodos(todos), nil
-}
-
-func (s *AppService) GetTodo(id int64) (*models.Todo, error) {
-	todo, err := s.todoRepo.GetByID(id)
-	if err != nil {
-		log.Error("Failed to fetch todo", "error", err, "id", id)
-		return nil, fmt.Errorf("error.todo_not_found")
-	}
-
-	return todo, nil
-}
-
 func (s *AppService) UpdateTodo(todo *models.Todo, tags []string) error {
 	todo.UpdatedAt = time.Now()
 	err := s.todoRepo.Update(todo)
@@ -155,6 +135,9 @@ func (s *AppService) DeleteTodo(id int64) error {
 	return nil
 }
 
+// ===========================================================================
+// Status updates
+// ===========================================================================
 func (s *AppService) MarkAsOpen(id int64) error {
 	todo, err := s.todoRepo.GetByID(id)
 	if err != nil {
@@ -280,95 +263,37 @@ func (s *AppService) UnarchiveTodo(todoID int64) error {
 	return nil
 }
 
-// Filtered queries
-func (s *AppService) GetOpenTodos() ([]*models.Todo, error) {
-	todos, err := s.todoRepo.GetOpen()
+func (s *AppService) MarkAsBlocked(id int64) error {
+	todo, err := s.todoRepo.GetByID(id)
 	if err != nil {
-		log.Error("Failed to fetch open todos", "error", err)
-		return nil, fmt.Errorf("error.todos_not_found")
+		log.Error("Failed to fetch todo for status change", "error", err, "id", id)
+		return fmt.Errorf("error.todo_not_found")
 	}
 
-	return sortTodos(todos), nil
+	// If transitioning from Doing to Blocked, calculate elapsed time
+	if todo.Status == models.Doing && todo.TimeStarted != nil {
+		elapsed := time.Since(*todo.TimeStarted).Seconds()
+		todo.TimeSpent += int64(elapsed)
+		todo.TimeStarted = nil // Clear the start time when moving to Blocked
+	}
+
+	todo.Status = models.Blocked
+	todo.UpdatedAt = time.Now()
+
+	err = s.todoRepo.Update(todo)
+	if err != nil {
+		log.Error("Failed to mark todo as blocked", "error", err, "id", id)
+		return fmt.Errorf("error.status_change_failed")
+	}
+
+	s.notify(socket_sync.TodoUpdated, todo.ID)
+
+	return nil
 }
 
-func (s *AppService) GetActiveTodos() ([]*models.Todo, error) {
-	todos, err := s.todoRepo.GetActive()
-	if err != nil {
-		log.Error("Failed to fetch active todos", "error", err)
-		return nil, fmt.Errorf("error.todos_not_found")
-	}
-
-	return sortTodos(todos), nil
-}
-
-func (s *AppService) GetCompletedTodos() ([]*models.Todo, error) {
-	todos, err := s.todoRepo.GetCompleted()
-	if err != nil {
-		log.Error("Failed to fetch completed todos", "error", err)
-		return nil, fmt.Errorf("error.todos_not_found")
-	}
-
-	return sortTodos(todos), nil
-}
-
-func (s *AppService) GetTodosForToday() (highPrio, dueToday, inProgress, overDue, comingUp []*models.Todo, error error) {
-	// Get todos that are due today and not archived
-	highPrio, err := s.todoRepo.GetAll(repository.PrioAboveHighFilter(), repository.NotArchivedFilter())
-	if err != nil {
-		log.Error("Failed to fetch highPrio for today", "error", err)
-		return nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
-	}
-	dueToday, err = s.todoRepo.GetAll(repository.DueTodayFilter(), repository.NotArchivedFilter())
-	if err != nil {
-		log.Error("Failed to fetch dueToday for today", "error", err)
-		return nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
-	}
-	inProgress, err = s.todoRepo.GetActive()
-	if err != nil {
-		log.Error("Failed to fetch inProgress for today", "error", err)
-		return nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
-	}
-	overDue, err = s.todoRepo.GetAll(repository.OverDueFilter(), repository.NotArchivedFilter())
-	if err != nil {
-		log.Error("Failed to fetch overDue for today", "error", err)
-		return nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
-	}
-	comingUp, err = s.todoRepo.GetAll(repository.ComingUpFilter(), repository.NotArchivedFilter())
-	if err != nil {
-		log.Error("Failed to fetch comingUp for today", "error", err)
-		return nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
-	}
-
-	return sortTodos(highPrio), sortTodos(dueToday), sortTodos(inProgress), sortTodos(overDue), sortTodos(comingUp), nil
-}
-
-func (s *AppService) GetTodayCompletionStats() (completed int, total int, formattedTimeSpent string) {
-	var timeSpent int64
-	// Get tasks completed today
-	completedToday, err := s.todoRepo.GetAll(repository.CompletedTodayFilter())
-	if err != nil {
-		log.Error("Failed to fetch today's completed tasks", "error", err)
-		return 0, 0, ""
-	}
-
-	// Get all tasks that would show in today's dashboard (not completed yet)
-	currentTodayTasks, err := s.todoRepo.GetAll(repository.AllTodayFilter(), repository.NotArchivedFilter())
-	if err != nil {
-		log.Error("Failed to fetch today's tasks", "error", err)
-		return len(completedToday), len(completedToday), ""
-	}
-
-	for _, todo := range completedToday {
-		timeSpent += todo.GetTotalSeconds()
-	}
-	for _, todo := range currentTodayTasks {
-		timeSpent += todo.GetTotalSeconds()
-	}
-
-	return len(completedToday), len(completedToday) + len(currentTodayTasks), utils.FormatTime(timeSpent)
-}
-
+// ===========================================================================
 // Tag methods
+// ===========================================================================
 func (s *AppService) AddTagToTodo(todoID int64, tag string) error {
 	err := s.todoRepo.AddTagToTodo(todoID, tag)
 	if err != nil {
@@ -393,7 +318,9 @@ func (s *AppService) RemoveTagFromTodo(todoID int64, tag string) error {
 	return nil
 }
 
-// Due date methods
+// ===========================================================================
+// Due date  methods
+// ===========================================================================
 func (s *AppService) SetDueDate(todoID int64, dueDate time.Time) error {
 	todo, err := s.todoRepo.GetByID(todoID)
 	if err != nil {
@@ -436,7 +363,9 @@ func (s *AppService) ClearDueDate(todoID int64) error {
 	return nil
 }
 
-// Priority methods
+// ===========================================================================
+// Priority Methods
+// ===========================================================================
 func (s *AppService) SetPriority(todoID int64, priority models.Priority) error {
 	todo, err := s.todoRepo.GetByID(todoID)
 	if err != nil {
@@ -458,7 +387,9 @@ func (s *AppService) SetPriority(todoID int64, priority models.Priority) error {
 	return nil
 }
 
+// ===========================================================================
 // Time tracking methods
+// ===========================================================================
 func (s *AppService) GetTotalTimeSpent(todoID int64) (time.Duration, error) {
 	todo, err := s.todoRepo.GetByID(todoID)
 	if err != nil {
@@ -545,6 +476,150 @@ func (s *AppService) ResetTimeTracking(todoID int64) error {
 	return nil
 }
 
+// ===========================================================================
+// Queries
+// ===========================================================================
+func (s *AppService) GetAllTodos(showArchived bool) ([]*models.Todo, error) {
+	archivedFilter := repository.NotArchivedFilter()
+	if showArchived {
+		archivedFilter = repository.ArchivedFilter()
+	}
+	todos, err := s.todoRepo.GetAll(archivedFilter)
+	if err != nil {
+		log.Error("Failed to fetch todos", "error", err)
+		return nil, fmt.Errorf("error.todos_not_found")
+	}
+
+	return sortTodos(todos), nil
+}
+
+func (s *AppService) GetTodo(id int64) (*models.Todo, error) {
+	todo, err := s.todoRepo.GetByID(id)
+	if err != nil {
+		log.Error("Failed to fetch todo", "error", err, "id", id)
+		return nil, fmt.Errorf("error.todo_not_found")
+	}
+
+	return todo, nil
+}
+
+func (s *AppService) GetOpenTodos() ([]*models.Todo, error) {
+	todos, err := s.todoRepo.GetOpen()
+	if err != nil {
+		log.Error("Failed to fetch open todos", "error", err)
+		return nil, fmt.Errorf("error.todos_not_found")
+	}
+
+	return sortTodos(todos), nil
+}
+
+func (s *AppService) GetActiveTodos() ([]*models.Todo, error) {
+	todos, err := s.todoRepo.GetActive()
+	if err != nil {
+		log.Error("Failed to fetch active todos", "error", err)
+		return nil, fmt.Errorf("error.todos_not_found")
+	}
+
+	return sortTodos(todos), nil
+}
+
+func (s *AppService) GetCompletedTodos() ([]*models.Todo, error) {
+	todos, err := s.todoRepo.GetCompleted()
+	if err != nil {
+		log.Error("Failed to fetch completed todos", "error", err)
+		return nil, fmt.Errorf("error.todos_not_found")
+	}
+
+	return sortTodos(todos), nil
+}
+
+func (s *AppService) GetBlockedTodos() ([]*models.Todo, error) {
+	todos, err := s.todoRepo.GetBlocked()
+	if err != nil {
+		log.Error("Failed to fetch blocked todos", "error", err)
+		return nil, fmt.Errorf("error.todos_not_found")
+	}
+	return sortTodos(todos), nil
+}
+
+// ===========================================================================
+// Today methods
+// ===========================================================================
+func (s *AppService) GetTodosForToday() (highPrio, dueToday, inProgress, blockedTasks, overDue, comingUp []*models.Todo, error error) {
+	// Get todos that are due today and not archived
+	highPrio, err := s.todoRepo.GetAll(repository.PrioAboveHighFilter(), repository.NotArchivedFilter())
+	if err != nil {
+		log.Error("Failed to fetch highPrio for today", "error", err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
+	}
+	dueToday, err = s.todoRepo.GetAll(repository.DueTodayFilter(), repository.NotArchivedFilter())
+	if err != nil {
+		log.Error("Failed to fetch dueToday for today", "error", err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
+	}
+	inProgress, err = s.todoRepo.GetActive()
+	if err != nil {
+		log.Error("Failed to fetch inProgress for today", "error", err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
+	}
+	blockedTasks, err = s.todoRepo.GetBlocked()
+	if err != nil {
+		log.Error("Failed to fetch blockedTasks for today", "error", err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
+	}
+	overDue, err = s.todoRepo.GetAll(repository.OverDueFilter(), repository.NotArchivedFilter())
+	if err != nil {
+		log.Error("Failed to fetch overDue for today", "error", err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
+	}
+	comingUp, err = s.todoRepo.GetAll(repository.ComingUpFilter(), repository.NotArchivedFilter())
+	if err != nil {
+		log.Error("Failed to fetch comingUp for today", "error", err)
+		return nil, nil, nil, nil, nil, nil, fmt.Errorf("error.todos_not_found")
+	}
+
+	return sortTodos(highPrio), sortTodos(dueToday), sortTodos(inProgress), sortTodos(blockedTasks), sortTodos(overDue), sortTodos(comingUp), nil
+}
+
+func (s *AppService) GetTodayCompletionStats() (completed int, total int, formattedTimeSpent string) {
+	var timeSpent int64
+	// Get tasks completed today
+	completedToday, err := s.todoRepo.GetAll(repository.CompletedTodayFilter())
+	if err != nil {
+		log.Error("Failed to fetch today's completed tasks", "error", err)
+		return 0, 0, ""
+	}
+
+	// Get all tasks that would show in today's dashboard (not completed yet)
+	currentTodayTasks, err := s.todoRepo.GetAll(repository.AllTodayFilter(), repository.NotArchivedFilter())
+	if err != nil {
+		log.Error("Failed to fetch today's tasks", "error", err)
+		return len(completedToday), len(completedToday), ""
+	}
+
+	for _, todo := range completedToday {
+		timeSpent += todo.GetTotalSeconds()
+	}
+	for _, todo := range currentTodayTasks {
+		if todo.Status == models.Blocked {
+			continue // Skip blocked tasks for time tracking
+		}
+		timeSpent += todo.GetTotalSeconds()
+	}
+
+	activeToday := 0
+	for _, t := range currentTodayTasks {
+		if t.Status == models.Blocked {
+			continue
+		}
+		activeToday++
+	}
+	return len(completedToday), len(completedToday) + activeToday, utils.FormatTime(timeSpent)
+}
+
+// ===========================================================================
+// Helpers
+// ===========================================================================
 func sortTodos(todos []*models.Todo) []*models.Todo {
 	// Sort todos by priority (high to low) and then by updatedAt (newest first)
 	sort.Slice(todos, func(i, j int) bool {
@@ -602,6 +677,8 @@ func (s *AppService) GetFilteredTodos(currentView ViewType, showArchived bool) (
 		todos, err = s.GetActiveTodos()
 	case DonePane:
 		todos, err = s.GetCompletedTodos()
+	case BlockedPane:
+		todos, err = s.GetBlockedTodos()
 	case AllPane:
 		todos, err = s.GetAllTodos(showArchived)
 	default:

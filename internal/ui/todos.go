@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
@@ -69,7 +68,6 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case LoadTodosMsg:
-		log.Debug("LOAD TODOS SYNC")
 		return m, m.loadTodosCmd()
 	case tea.KeyMsg:
 		if m.tuiService.ShouldShowModal() {
@@ -152,6 +150,13 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.shouldAllowTodoCrud() {
 				item := m.list.SelectedItem().(*TodoItem)
 				return m, m.toggleArchiveCmd(item.todo.ID, item.todo.Archived)
+			}
+		case key.Matches(msg, m.tuiService.KeyMap.BlockTodo):
+			// Block/unblock todo
+			if m.shouldAllowTodoCrud() {
+				item := m.list.SelectedItem().(*TodoItem)
+				isCurrentlyBlocked := item.todo.Status == models.Blocked
+				return m, m.blockTodoCmd(item.todo.ID, isCurrentlyBlocked)
 			}
 		case key.Matches(msg, m.tuiService.KeyMap.ToggleArchived):
 			if m.tuiService.CurrentView == service.AllPane {
@@ -455,4 +460,29 @@ func (m *TodosModel) showAboutModalCmd() tea.Cmd {
 
 func InitCmd() tea.Msg {
 	return LoadTodosMsg{}
+}
+
+func (m *TodosModel) blockTodoCmd(todoID int64, isCurrentlyBlocked bool) tea.Cmd {
+	return func() tea.Msg {
+		var err error
+		var newStatus models.Status
+
+		if isCurrentlyBlocked {
+			// If currently blocked, unblock by setting to Open
+			err = m.service.MarkAsOpen(todoID)
+			newStatus = models.Open
+		} else {
+			// If not blocked, block it
+			err = m.service.MarkAsBlocked(todoID)
+			newStatus = models.Blocked
+		}
+
+		if err != nil {
+			return TodoErrorMsg{err: err}
+		}
+
+		return todoStatusChangedMsg{
+			newStatus: newStatus.String(),
+		}
+	}
 }

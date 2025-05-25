@@ -28,6 +28,7 @@ type TodayDashboardModel struct {
 	highPriorityTasks []*models.Todo
 	dueTodayTasks     []*models.Todo
 	inProgressTasks   []*models.Todo
+	blockedTasks      []*models.Todo
 	overdueTasks      []*models.Todo
 	upcomingTasks     []*models.Todo
 
@@ -255,6 +256,26 @@ func (m *TodayDashboardModel) renderDashboard() string {
 			inProgressTasks,
 		))
 
+	// Blocked Tasks Section
+	blockedTitle := styling.TextStyle.
+		Bold(true).
+		Foreground(theme.BlockedStatusColor).
+		Render(m.translator.Tf("today_blocked",
+			map[string]interface{}{"count": len(m.blockedTasks)}))
+
+	blockedTasks := m.renderTasks(m.blockedTasks, contentWidth)
+	blockedBox := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(theme.BlockedStatusColor).
+		Padding(1, 2).
+		Width(contentWidth).
+		Render(lipgloss.JoinVertical(
+			lipgloss.Left,
+			blockedTitle,
+			"",
+			blockedTasks,
+		))
+
 	// Coming Up Tasks Section
 	upcomingTitle := styling.TextStyle.
 		Bold(true).
@@ -293,6 +314,10 @@ func (m *TodayDashboardModel) renderDashboard() string {
 
 	if len(m.inProgressTasks) > 0 {
 		sections = append(sections, inProgressBox)
+	}
+
+	if len(m.blockedTasks) > 0 {
+		sections = append(sections, blockedBox)
 	}
 
 	if len(m.upcomingTasks) > 0 {
@@ -412,6 +437,7 @@ func (m *TodayDashboardModel) allTodosEmpty() bool {
 	return len(m.highPriorityTasks) == 0 &&
 		len(m.dueTodayTasks) == 0 &&
 		len(m.inProgressTasks) == 0 &&
+		len(m.blockedTasks) == 0 &&
 		len(m.overdueTasks) == 0 &&
 		len(m.upcomingTasks) == 0
 }
@@ -439,7 +465,7 @@ func (m *TodayDashboardModel) GetTodayDataCmd() tea.Cmd {
 	return func() tea.Msg {
 		var err error
 		m.completedTasksCount, m.totalTasksCount, m.formattedTimeSpent = m.service.GetTodayCompletionStats()
-		m.highPriorityTasks, m.dueTodayTasks, m.inProgressTasks, m.overdueTasks, m.upcomingTasks, err = m.service.GetTodosForToday()
+		m.highPriorityTasks, m.dueTodayTasks, m.inProgressTasks, m.blockedTasks, m.overdueTasks, m.upcomingTasks, err = m.service.GetTodosForToday()
 
 		if err != nil {
 			return TodoErrorMsg{err: err}

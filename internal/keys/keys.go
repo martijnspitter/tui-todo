@@ -13,6 +13,7 @@ type KeyMap struct {
 	Delete         key.Binding
 	AdvanceStatus  key.Binding
 	Archive        key.Binding
+	BlockTodo      key.Binding
 	ToggleArchived key.Binding
 	Help           key.Binding
 	Filter         key.Binding
@@ -39,8 +40,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("left/shift+tab", "help.left_shift_tab"),
 		),
 		SwitchPane: key.NewBinding(
-			key.WithKeys("1", "2", "3", "4", "5"),
-			key.WithHelp("1-5", "help.pane"),
+			key.WithKeys("1", "2", "3", "4", "5", "6"),
+			key.WithHelp("1-6", "help.pane"),
 		),
 		Select: key.NewBinding(
 			key.WithKeys("enter"),
@@ -121,6 +122,10 @@ func DefaultKeyMap() KeyMap {
 		About: key.NewBinding(
 			key.WithKeys("i"),
 			key.WithHelp("i", "help.i"),
+		),
+		BlockTodo: key.NewBinding(
+			key.WithKeys("ctrl+b"),
+			key.WithHelp("ctrl+b", "help.ctrl_b"),
 		),
 	}
 }
