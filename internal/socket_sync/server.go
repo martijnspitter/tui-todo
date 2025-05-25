@@ -1,4 +1,4 @@
-package sync
+package socket_sync
 
 import (
 	"fmt"
@@ -221,7 +221,10 @@ func (s *Server) handleClient(clientID string, conn net.Conn) {
 			s.notifListener.OnNotification(notification)
 
 			// Broadcast to all other clients
-			s.broadcastToOthers(notification, clientID)
+			if err := s.broadcastToOthers(notification, clientID); err != nil {
+				// Remove the failing client so that subsequent broadcasts don’t keep erroring
+				log.Error("Broadcast to others failed", "sender", clientID, "error", err)
+			}
 		}
 	}
 }
@@ -240,6 +243,8 @@ func (s *Server) Broadcast(notification Notification) error {
 
 // broadcastToOthers sends a notification to all clients except the sender
 func (s *Server) broadcastToOthers(notification Notification, senderID string) error {
+	s.broadcastLock.Lock()
+	defer s.broadcastLock.Unlock()
 	s.clientsMutex.RLock()
 	defer s.clientsMutex.RUnlock()
 

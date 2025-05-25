@@ -1,4 +1,4 @@
-package sync
+package socket_sync
 
 import (
 	"bufio"
@@ -114,6 +114,7 @@ func WriteMessage(conn net.Conn, notification Notification) error {
 
 // ReadMessage reads a notification message from the connection
 func ReadMessage(conn net.Conn) (Notification, error) {
+	_ = conn.SetReadDeadline(time.Now().Add(ReadTimeout))
 	var notification Notification
 
 	// Create buffered reader
@@ -123,6 +124,10 @@ func ReadMessage(conn net.Conn) (Notification, error) {
 	data, err := reader.ReadBytes('\n')
 	if err != nil {
 		return notification, &SocketError{Op: "read", Err: err}
+	}
+
+	if len(data) > MaxMessageSize {
+		return notification, &SocketError{Op: "size_check", Err: errors.New("message too large")}
 	}
 
 	// Decode JSON message

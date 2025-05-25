@@ -3,12 +3,13 @@ package service
 import (
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/log"
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/repository"
-	"github.com/martijnspitter/tui-todo/internal/sync"
+	"github.com/martijnspitter/tui-todo/internal/socket_sync"
 	"github.com/martijnspitter/tui-todo/internal/utils"
 )
 
@@ -26,8 +27,9 @@ type NotificationCallback func(notificationType string, todoID int64)
 type AppService struct {
 	todoRepo       repository.TodoRepository
 	updateInfo     *UpdateInfo
-	syncManager    *sync.Manager
+	syncManager    *socket_sync.Manager
 	notifCallbacks []NotificationCallback
+	mutex          sync.Mutex
 }
 
 func NewAppService(todoRepo repository.TodoRepository) *AppService {
@@ -40,7 +42,7 @@ func NewAppService(todoRepo repository.TodoRepository) *AppService {
 // ===========================================================================
 // Init Methods
 // ===========================================================================
-func (s *AppService) SetSyncManager(manager *sync.Manager) {
+func (s *AppService) SetSyncManager(manager *socket_sync.Manager) {
 	s.syncManager = manager
 }
 
@@ -90,12 +92,7 @@ func (s *AppService) CreateTodo(title, description string, priority models.Prior
 		}
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_CREATED", todo.ID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoCreated, todo.ID)
 
 	return nil
 }
@@ -140,12 +137,7 @@ func (s *AppService) UpdateTodo(todo *models.Todo, tags []string) error {
 		}
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_UPDATED", todo.ID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoUpdated, todo.ID)
 
 	return nil
 }
@@ -157,12 +149,7 @@ func (s *AppService) DeleteTodo(id int64) error {
 		return fmt.Errorf("error.delete_failed")
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_DELETED", id); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoDeleted, id)
 
 	return nil
 }
@@ -190,12 +177,7 @@ func (s *AppService) MarkAsOpen(id int64) error {
 		return fmt.Errorf("error.status_change_failed")
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_UPDATED", todo.ID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoUpdated, todo.ID)
 
 	return nil
 }
@@ -222,12 +204,7 @@ func (s *AppService) MarkAsDoing(id int64) error {
 		return fmt.Errorf("error.status_change_failed")
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_UPDATED", todo.ID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoUpdated, todo.ID)
 
 	return nil
 }
@@ -255,12 +232,7 @@ func (s *AppService) MarkAsDone(id int64) error {
 		return fmt.Errorf("error.status_change_failed")
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_UPDATED", todo.ID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoUpdated, todo.ID)
 
 	return nil
 }
@@ -281,12 +253,7 @@ func (s *AppService) ArchiveTodo(todoID int64) error {
 		return fmt.Errorf("error.archive_failed")
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_UPDATED", todo.ID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoUpdated, todo.ID)
 
 	return nil
 }
@@ -307,12 +274,7 @@ func (s *AppService) UnarchiveTodo(todoID int64) error {
 		return fmt.Errorf("error.unarchive_failed")
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_UPDATED", todo.ID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoUpdated, todo.ID)
 
 	return nil
 }
@@ -413,12 +375,7 @@ func (s *AppService) AddTagToTodo(todoID int64, tag string) error {
 		return fmt.Errorf("error.tag_add_failed")
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_UPDATED", todoID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoUpdated, todoID)
 
 	return nil
 }
@@ -430,12 +387,7 @@ func (s *AppService) RemoveTagFromTodo(todoID int64, tag string) error {
 		return fmt.Errorf("error.tag_remove_failed")
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_UPDATED", todoID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoUpdated, todoID)
 
 	return nil
 }
@@ -457,12 +409,7 @@ func (s *AppService) SetDueDate(todoID int64, dueDate time.Time) error {
 		return fmt.Errorf("error.update_failed")
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_UPDATED", todo.ID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoUpdated, todo.ID)
 
 	return nil
 }
@@ -483,12 +430,7 @@ func (s *AppService) ClearDueDate(todoID int64) error {
 		return fmt.Errorf("error.update_failed")
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_UPDATED", todo.ID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoUpdated, todo.ID)
 
 	return nil
 }
@@ -510,12 +452,7 @@ func (s *AppService) SetPriority(todoID int64, priority models.Priority) error {
 		return fmt.Errorf("error.update_failed")
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_UPDATED", todo.ID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoUpdated, todo.ID)
 
 	return nil
 }
@@ -648,12 +585,7 @@ func (s *AppService) AdvanceStatus(todoID int64) (models.Status, error) {
 		return 0, fmt.Errorf("error.update_failed")
 	}
 
-	if s.syncManager != nil {
-		if err := s.syncManager.NotifyChange("TODO_UPDATED", todo.ID); err != nil {
-			log.Warn("Failed to notify other instances", "error", err)
-			// Continue anyway - don't fail the operation due to sync issues
-		}
-	}
+	s.notify(socket_sync.TodoUpdated, todo.ID)
 
 	return newStatus, nil
 }
@@ -712,14 +644,21 @@ func (s *AppService) NeedsForceUpdate() bool {
 // Sync Methods
 // ===========================================================================
 func (s *AppService) RegisterNotificationCallback(callback NotificationCallback) {
+	s.mutex.Lock()
 	s.notifCallbacks = append(s.notifCallbacks, callback)
+	s.mutex.Unlock()
 }
 
-func (s *AppService) OnNotification(notification sync.Notification) {
-	log.Debug("Received notification", "type", notification.Type, "todoID", notification.ID)
+func (s *AppService) OnNotification(notification socket_sync.Notification) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 
 	// Invoke all registered callbacks
 	for _, callback := range s.notifCallbacks {
 		callback(string(notification.Type), notification.ID)
 	}
+}
+
+func (s *AppService) notify(nt socket_sync.NotificationType, id int64) {
+	s.notify(nt, id)
 }

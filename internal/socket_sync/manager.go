@@ -1,6 +1,4 @@
-// internal/sync/manager.go
-
-package sync
+package socket_sync
 
 import (
 	"fmt"
@@ -57,8 +55,6 @@ func (m *Manager) Start() error {
 	if m.started {
 		return nil // Already started
 	}
-
-	log.Debug("Starting sync manager", "socket", m.socketPath)
 
 	// Attempt to become the primary instance by starting a server
 	server, err := NewServer(m.socketPath, m)
@@ -159,9 +155,13 @@ func (m *Manager) processBufferedNotifications() {
 
 	for _, notification := range buffer {
 		if m.isPrimary && m.server != nil {
-			m.server.Broadcast(notification)
+			if err := m.server.Broadcast(notification); err != nil {
+				log.Error("Failed to replay buffered notification", "error", err)
+			}
 		} else if m.client != nil {
-			m.client.SendNotification(notification)
+			if err := m.client.SendNotification(notification); err != nil {
+				log.Error("Failed to replay buffered notification", "error", err)
+			}
 		}
 	}
 }

@@ -1,6 +1,4 @@
-// internal/sync/client.go
-
-package sync
+package socket_sync
 
 import (
 	"errors"
@@ -32,6 +30,7 @@ type Client struct {
 	shutdownWg     sync.WaitGroup
 	reconnecting   bool
 	reconnectMutex sync.Mutex
+	writeMutex     sync.Mutex
 }
 
 // NewClient creates a new socket client
@@ -204,7 +203,10 @@ func (c *Client) SendNotification(notification Notification) error {
 		return errors.New("not connected to server")
 	}
 
+	c.writeMutex.Lock()
 	err := WriteMessage(conn, notification)
+	c.writeMutex.Unlock()
+
 	if err != nil {
 		// If the connection failed, try to reconnect
 		if IsSocketClosed(err) && !c.isShuttingDown() {

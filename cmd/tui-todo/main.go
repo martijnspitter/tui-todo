@@ -16,7 +16,7 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/logger"
 	"github.com/martijnspitter/tui-todo/internal/repository"
 	"github.com/martijnspitter/tui-todo/internal/service"
-	"github.com/martijnspitter/tui-todo/internal/sync"
+	"github.com/martijnspitter/tui-todo/internal/socket_sync"
 	"github.com/martijnspitter/tui-todo/internal/ui"
 	"github.com/martijnspitter/tui-todo/internal/version"
 )
@@ -46,7 +46,7 @@ func main() {
 	}
 	service := service.NewAppService(todoRepo)
 	baseModel := ui.NewBaseModel(service, translationService)
-	syncManager, err := sync.NewManager(appVersion, service)
+	syncManager, err := socket_sync.NewManager(appVersion, service)
 	if err == nil {
 		// Store the sync manager in the service
 		service.SetSyncManager(syncManager)
