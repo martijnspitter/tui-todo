@@ -124,14 +124,14 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, m.tuiService.KeyMap.AdvanceStatus):
 			// Advance todo status
-			if m.list.SelectedItem() != nil {
+			if m.shouldAllowTodoCrud() {
 				item := m.list.SelectedItem().(*TodoItem)
 				return m, m.advanceTodoStatusCmd(item.todo.ID)
 			}
 
 		case key.Matches(msg, m.tuiService.KeyMap.Edit):
 			// Edit selected todo
-			if m.list.SelectedItem() != nil {
+			if m.shouldAllowTodoCrud() {
 				item := m.list.SelectedItem().(*TodoItem)
 				return m, m.showEditModalCmd(item.todo)
 			}
@@ -142,12 +142,12 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case key.Matches(msg, m.tuiService.KeyMap.Delete):
 			// Delete selected todo
-			if m.list.SelectedItem() != nil {
+			if m.shouldAllowTodoCrud() {
 				item := m.list.SelectedItem().(*TodoItem)
 				return m, m.showConfirmDeleteCmd(item.todo.ID)
 			}
 		case key.Matches(msg, m.tuiService.KeyMap.Archive):
-			if m.list.SelectedItem() != nil {
+			if m.shouldAllowTodoCrud() {
 				item := m.list.SelectedItem().(*TodoItem)
 				return m, m.toggleArchiveCmd(item.todo.ID, item.todo.Archived)
 			}
@@ -300,6 +300,10 @@ func truncateString(s string, length int) string {
 		return s
 	}
 	return s[:length-3] + "..."
+}
+
+func (m *TodosModel) shouldAllowTodoCrud() bool {
+	return m.list.SelectedItem() != nil && m.tuiService.CurrentView != service.TodayPane
 }
 
 // ===========================================================================
