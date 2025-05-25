@@ -318,6 +318,38 @@ func (s *AppService) RemoveTagFromTodo(todoID int64, tag string) error {
 	return nil
 }
 
+// GetAllTags returns all tags in the system
+func (s *AppService) GetAllTags() ([]*models.Tag, error) {
+	tags, err := s.todoRepo.GetAllTags()
+	if err != nil {
+		log.Error("Failed to get all tags", "error", err)
+		return nil, fmt.Errorf("error.tags_not_found")
+	}
+	return tags, nil
+}
+
+// CreateTag creates a new tag in the system
+func (s *AppService) CreateTag(tagName string) error {
+	// We can reuse the AddTagToTodo method with ID 0
+	// The tag will be created if it doesn't exist
+	err := s.todoRepo.AddTagToTodo(0, tagName)
+	if err != nil {
+		log.Error("Failed to create tag", "error", err, "tag", tagName)
+		return fmt.Errorf("error.tag_create_failed")
+	}
+	return nil
+}
+
+// DeleteTag removes a tag from the system
+func (s *AppService) DeleteTag(id int64) error {
+	err := s.todoRepo.DeleteTag(id)
+	if err != nil {
+		log.Error("Failed to delete tag", "error", err, "tag", id)
+		return fmt.Errorf("error.tag_delete_failed")
+	}
+	return nil
+}
+
 // ===========================================================================
 // Due date  methods
 // ===========================================================================

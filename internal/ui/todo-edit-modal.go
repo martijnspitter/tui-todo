@@ -41,7 +41,7 @@ type TodoEditModal struct {
 	todo         *models.Todo
 	titleInput   textinput.Model
 	descInput    textarea.Model
-	tagsInput    textinput.Model
+	tagsInput    *TagSelector
 	dueDateInput textinput.Model
 	priority     models.Priority
 	status       models.Status
@@ -65,8 +65,14 @@ func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.
 	desc.SetValue(todo.Description)
 	desc.ShowLineNumbers = true
 
-	tagsInput := textinput.New()
-	tagsInput.SetValue(strings.Join(todo.Tags, ", "))
+	allTags, err := appService.GetAllTags()
+	if err != nil {
+		log.Error("Failed to load tags", "error", err)
+		allTags = []*models.Tag{}
+	}
+
+	// Create tag selector with selected tags
+	tagSelector := NewTagSelector(todo.Tags, allTags)
 
 	dueDateInput := textinput.New()
 	dueDateInput.Placeholder = "YYYY-MM-DD HH:MM (e.g. 2023-12-31 15:30)"
@@ -78,7 +84,7 @@ func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.
 		todo:         todo,
 		titleInput:   ti,
 		descInput:    desc,
-		tagsInput:    tagsInput,
+		tagsInput:    tagSelector,
 		dueDateInput: dueDateInput,
 		priority:     todo.Priority,
 		status:       todo.Status,
@@ -158,6 +164,18 @@ func (m *TodoEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case editingTags:
 		m.tagsInput, cmd = m.tagsInput.Update(msg)
+
+		// Check if a new tag was created and add it to the database
+		if newTag, created := m.tagsInput.CreateTag(); created {
+			cmds = append(cmds, func() tea.Msg {
+				err := m.appService.CreateTag(newTag)
+				if err != nil {
+					return TodoErrorMsg{err: err}
+				}
+				return nil
+			})
+		}
+
 		cmds = append(cmds, cmd)
 	case editingDueDate:
 		m.dueDateInput, cmd = m.dueDateInput.Update(msg)
@@ -295,6 +313,9 @@ func (m *TodoEditModal) View() string {
 	return positioned
 }
 
+// ===========================================================================
+// Helpers
+// ===========================================================================
 func (m *TodoEditModal) goForward() {
 	switch m.editState {
 	case editingTitle:
@@ -343,6 +364,9 @@ func (m *TodoEditModal) goBack() {
 	}
 }
 
+// ===========================================================================
+// Commands
+// ===========================================================================
 func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 	return func() tea.Msg {
 		// Update todo with new values
@@ -365,15 +389,7 @@ func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 			m.todo.DueDate = &dueDate
 		}
 
-		// Handle tags (split by comma and trim)
-		rawTags := strings.Split(m.tagsInput.Value(), ",")
-		tags := make([]string, 0, len(rawTags))
-		for _, tag := range rawTags {
-			tag = strings.TrimSpace(tag)
-			if tag != "" {
-				tags = append(tags, tag)
-			}
-		}
+		tags := m.tagsInput.SelectedTags()
 
 		err := m.appService.SaveTodo(m.todo, tags)
 		if err != nil {
@@ -383,4 +399,151 @@ func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 		// Close modal and reload todos
 		return modalCloseMsg{reload: true}
 	}
+}
+
+// ===========================================================================
+// Tag Selector
+// ===========================================================================
+type TagSelector struct {
+	selectedTags  []string
+	availableTags []*models.Tag
+	focused       bool
+	cursor        int
+	newTagInput   textinput.Model
+	creatingTag   bool
+	tuiService    *service.TuiService
+}
+
+func NewTagSelector(selectedTags []string, availableTags []*models.Tag) *TagSelector {
+	input := textinput.New()
+	input.Placeholder = "Enter new tag name"
+
+	return &TagSelector{
+		selectedTags:  selectedTags,
+		availableTags: availableTags,
+		cursor:        0,
+		newTagInput:   input,
+	}
+}
+
+func (ts *TagSelector) Focus() {
+	ts.focused = true
+}
+
+func (ts *TagSelector) Blur() {
+	ts.focused = false
+	ts.creatingTag = false
+	ts.newTagInput.Blur()
+}
+
+func (ts *TagSelector) Update(msg tea.Msg) (*TagSelector, tea.Cmd) {
+	var cmd tea.Cmd
+
+	if ts.creatingTag {
+		ts.newTagInput, cmd = ts.newTagInput.Update(msg)
+		return ts, cmd
+	}
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, ts.tuiService.KeyMap.Up):
+			if ts.cursor > 0 {
+				ts.cursor--
+			}
+		case key.Matches(msg, ts.tuiService.KeyMap.Down):
+			if ts.cursor < len(ts.availableTags)-1 {
+				ts.cursor++
+			}
+		case key.Matches(msg, ts.tuiService.KeyMap.Select):
+			// Toggle selected status of the current tag
+			currentTag := ts.availableTags[ts.cursor]
+			if ts.IsSelected(currentTag.Name) {
+				// Remove tag
+				for i, tag := range ts.selectedTags {
+					if tag == currentTag.Name {
+						ts.selectedTags = append(ts.selectedTags[:i], ts.selectedTags[i+1:]...)
+						break
+					}
+				}
+			} else {
+				// Add tag
+				ts.selectedTags = append(ts.selectedTags, currentTag.Name)
+			}
+		case key.Matches(msg, ts.tuiService.KeyMap.New):
+			// Create new tag
+			ts.creatingTag = true
+			ts.newTagInput.Focus()
+			return ts, textinput.Blink
+		}
+	}
+
+	return ts, nil
+}
+
+func (ts *TagSelector) CreateTag() (string, bool) {
+	if ts.creatingTag && ts.newTagInput.Value() != "" {
+		newTag := strings.TrimSpace(ts.newTagInput.Value())
+		ts.newTagInput.SetValue("")
+		ts.creatingTag = false
+
+		// Check if tag already exists
+		for _, tag := range ts.availableTags {
+			if tag.Name == newTag {
+				// Tag already exists, select it
+				ts.selectedTags = append(ts.selectedTags, newTag)
+				return "", false
+			}
+		}
+
+		// Add to available and selected tags
+		ts.availableTags = append(ts.availableTags, &models.Tag{Name: newTag})
+		ts.selectedTags = append(ts.selectedTags, newTag)
+		return newTag, true
+	}
+	return "", false
+}
+
+func (ts *TagSelector) IsSelected(tag string) bool {
+	for _, t := range ts.selectedTags {
+		if t == tag {
+			return true
+		}
+	}
+	return false
+}
+
+func (ts *TagSelector) View() string {
+	if ts.creatingTag {
+		return fmt.Sprintf("Create new tag:\n%s\n(Enter to add, Esc to cancel)", ts.newTagInput.View())
+	}
+
+	var sb strings.Builder
+
+	if len(ts.availableTags) == 0 {
+		sb.WriteString("No tags available. Press 'n' to create a new tag.")
+		return sb.String()
+	}
+
+	sb.WriteString("Select tags (space to toggle, n to create new):\n\n")
+
+	for i, tag := range ts.availableTags {
+		cursor := " "
+		if ts.focused && ts.cursor == i {
+			cursor = ">"
+		}
+
+		checked := "[ ]"
+		if ts.IsSelected(tag.Name) {
+			checked = "[x]"
+		}
+
+		sb.WriteString(fmt.Sprintf("%s %s %s\n", cursor, checked, tag))
+	}
+
+	return sb.String()
+}
+
+func (ts *TagSelector) SelectedTags() []string {
+	return ts.selectedTags
 }

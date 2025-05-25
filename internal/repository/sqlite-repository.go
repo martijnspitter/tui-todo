@@ -539,6 +539,51 @@ func (r *SQLiteTodoRepository) FindTodosByTag(tagName string) ([]*models.Todo, e
 	return todos, nil
 }
 
+// GetAllTags returns all tags in the system
+func (r *SQLiteTodoRepository) GetAllTags() ([]*models.Tag, error) {
+	rows, err := r.db.Query(`
+		SELECT id, name
+		FROM tags
+		ORDER BY name
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []*models.Tag
+	for rows.Next() {
+		tag := &models.Tag{}
+		if err := rows.Scan(&tag); err != nil {
+			return nil, err
+		}
+		tags = append(tags, tag)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return tags, nil
+}
+
+// DeleteTag removes a tag from the system
+func (r *SQLiteTodoRepository) DeleteTag(id int64) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete from tags table (will cascade to todo_tags)
+	_, err = tx.Exec("DELETE FROM tags WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 func initSchema(db *sql.DB) error {
 	_, err := db.Exec(`
         CREATE TABLE IF NOT EXISTS todos (
