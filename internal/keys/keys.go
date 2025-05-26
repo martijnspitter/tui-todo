@@ -124,8 +124,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("i", "help.i"),
 		),
 		BlockTodo: key.NewBinding(
-			key.WithKeys("ctrl+b"),
-			key.WithHelp("ctrl+b", "help.ctrl_b"),
+			key.WithKeys("ctrl+t"),
+			key.WithHelp("ctrl+t", "help.ctrl_t"),
 		),
 	}
 }

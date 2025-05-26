@@ -85,7 +85,7 @@
   "help.tag_filter": "Filter by tag",
   "help.save": "Save",
   "help.i": "About",
-  "help.ctrl_b": "Set Todo to blocked",
+  "help.ctrl_t": "Toggle Todo Blocked",
   "ui.updated": "Updated: {{.Time}}",
   "ui.due": "Due: {{.Time}}",
   "ui.time_spent": "Time spent: {{.Time}}",

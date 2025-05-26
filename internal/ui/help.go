@@ -81,6 +81,7 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 
 			contextKeyMap.AddBindingInFull(baseKeyMap.Delete)
 			contextKeyMap.AddBindingInFull(baseKeyMap.AdvanceStatus)
+			contextKeyMap.AddBindingInFull(baseKeyMap.BlockTodo)
 			contextKeyMap.AddBindingInFull(baseKeyMap.Archive)
 
 			contextKeyMap.AddBindingInFull(baseKeyMap.About)
