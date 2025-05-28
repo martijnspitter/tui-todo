@@ -8,7 +8,6 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/repository"
 	"github.com/martijnspitter/tui-todo/internal/service"
-	"github.com/stretchr/testify/mock"
 	"pgregory.net/rapid"
 )
 
@@ -151,7 +150,7 @@ func (m *MockTodoRepository) FindTodosByTag(tagName string) ([]*models.Todo, err
 	return m.MockTodos, nil
 }
 
-func (m *MockTodoRepository) GetAllTags() ([]models.Tag, error) {
+func (m *MockTodoRepository) GetAllTags() ([]*models.Tag, error) {
 	if m.MockError != nil {
 		return nil, m.MockError
 	}
@@ -162,7 +161,12 @@ func (m *MockTodoRepository) GetAllTags() ([]models.Tag, error) {
 			{Name: "urgent", ID: 3},
 		}
 	}
-	return m.MockTags, nil
+	// Convert []models.Tag to []*models.Tag
+	tagPointers := make([]*models.Tag, len(m.MockTags))
+	for i := range m.MockTags {
+		tagPointers[i] = &m.MockTags[i]
+	}
+	return tagPointers, nil
 }
 
 func (m *MockTodoRepository) DeleteTag(id int64) error {

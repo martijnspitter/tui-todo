@@ -98,6 +98,14 @@ func (t *TuiService) RemoveNameFilter() {
 	t.FilterState.FilterMode = FilterByTitle
 }
 
+func (t *TuiService) IsTodoView() bool {
+	return t.CurrentView == OpenPane ||
+		t.CurrentView == DoingPane ||
+		t.CurrentView == DonePane ||
+		t.CurrentView == BlockedPane ||
+		t.CurrentView == AllPane
+}
+
 func (t *TuiService) SwitchToListView() {
 	if t.isPrevViewATab() {
 		t.CurrentView = t.PrevView

@@ -27,7 +27,7 @@ func EmptyStateView(translator *i18n.TranslationService, width, height int) stri
 
 	return lipgloss.Place(
 		width,
-		height,
+		height+2,
 		lipgloss.Center,
 		lipgloss.Center,
 		emptyState,

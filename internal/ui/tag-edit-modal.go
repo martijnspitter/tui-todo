@@ -27,6 +27,7 @@ const (
 // TagItem represents a tag item in the list
 type TagItem struct {
 	name string
+	ID   int64
 }
 
 func (i TagItem) Title() string       { return i.name }
@@ -44,8 +45,8 @@ type TagManagementModal struct {
 	tuiService   *service.TuiService
 	translator   *i18n.TranslationService
 	help         tea.Model
-	selectedTag  string
-	deletingTag  string
+	selectedTag  int64
+	deletingTag  int64
 	confirmInput textinput.Model
 }
 
@@ -99,7 +100,7 @@ func (m *TagManagementModal) loadTags() tea.Cmd {
 
 		var items []list.Item
 		for _, tag := range tags {
-			items = append(items, TagItem{name: tag})
+			items = append(items, TagItem{name: tag.Name, ID: tag.ID})
 		}
 
 		return TagsLoadedMsg{items: items}
@@ -133,7 +134,7 @@ func (m *TagManagementModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				// Close modal without saving
 				return m, func() tea.Msg { return modalCloseMsg{reload: false} }
 
-			case key.Matches(msg, m.tuiService.KeyMap.Create):
+			case key.Matches(msg, m.tuiService.KeyMap.New):
 				// Enter create tag mode
 				m.state = creatingTag
 				m.tagInput.Focus()
@@ -141,7 +142,7 @@ func (m *TagManagementModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case key.Matches(msg, m.tuiService.KeyMap.Delete):
 				// Enter delete mode if a tag is selected
 				if i, ok := m.tagList.SelectedItem().(TagItem); ok {
-					m.deletingTag = i.name
+					m.deletingTag = i.ID
 					m.state = deletingTag
 					m.confirmInput.SetValue("")
 					m.confirmInput.Focus()
