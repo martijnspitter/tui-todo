@@ -68,7 +68,7 @@ func (m *TodayDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
-		m.height = msg.Height - 5
+		m.height = msg.Height - 4
 
 		if !m.ready {
 			// Initialize viewport when we first get a window size
@@ -78,7 +78,7 @@ func (m *TodayDashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else {
 			// Update viewport size
 			m.viewport.Width = m.width
-			m.viewport.Height = m.height + 1
+			m.viewport.Height = m.height
 		}
 
 		// Update content if we have any
@@ -159,7 +159,7 @@ func (m *TodayDashboardModel) renderDashboard() string {
 			Width(contentWidth).
 			Render(lipgloss.JoinVertical(
 				lipgloss.Left,
-				EmptyStateView(m.translator, contentWidth, 13),
+				EmptySuccessStateView(m.translator, contentWidth, 13),
 			))
 		content := lipgloss.JoinVertical(
 			lipgloss.Left,

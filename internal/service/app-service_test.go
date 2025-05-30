@@ -21,11 +21,12 @@ type MockTodoRepository struct {
 	RemovedTags  map[int64][]string
 
 	// Mock data to return
-	MockTodos   []*models.Todo
-	MockTodo    *models.Todo
-	MockError   error
-	MockTags    []string
-	SearchQuery string
+	MockTodos    []*models.Todo
+	MockTodo     *models.Todo
+	MockError    error
+	MockTodoTags []string
+	MockTags     []models.Tag
+	SearchQuery  string
 }
 
 // Implement all repository methods...
@@ -139,7 +140,7 @@ func (m *MockTodoRepository) GetTodoTags(id int64) ([]string, error) {
 	if m.MockError != nil {
 		return nil, m.MockError
 	}
-	return m.MockTags, nil
+	return m.MockTodoTags, nil
 }
 
 func (m *MockTodoRepository) FindTodosByTag(tagName string) ([]*models.Todo, error) {
@@ -147,6 +148,53 @@ func (m *MockTodoRepository) FindTodosByTag(tagName string) ([]*models.Todo, err
 		return nil, m.MockError
 	}
 	return m.MockTodos, nil
+}
+
+func (m *MockTodoRepository) GetAllTags() ([]*models.Tag, error) {
+	if m.MockError != nil {
+		return nil, m.MockError
+	}
+	if m.MockTags == nil {
+		m.MockTags = []models.Tag{
+			{Name: "test", ID: 1},
+			{Name: "important", ID: 2},
+			{Name: "urgent", ID: 3},
+		}
+	}
+	// Convert []models.Tag to []*models.Tag
+	tagPointers := make([]*models.Tag, len(m.MockTags))
+	for i := range m.MockTags {
+		tagPointers[i] = &m.MockTags[i]
+	}
+	return tagPointers, nil
+}
+
+func (m *MockTodoRepository) DeleteTag(id int64) error {
+	if m.MockError != nil {
+		return m.MockError
+	}
+	// Simulate tag deletion
+	for i, tag := range m.MockTags {
+		if tag.ID == id {
+			m.MockTags = append(m.MockTags[:i], m.MockTags[i+1:]...)
+			return nil
+		}
+	}
+	return errors.New("tag not found")
+}
+
+func (m *MockTodoRepository) UpdateTag(tag *models.Tag) error {
+	if m.MockError != nil {
+		return m.MockError
+	}
+	// Simulate tag update
+	for i, existingTag := range m.MockTags {
+		if existingTag.ID == tag.ID {
+			m.MockTags[i] = *tag // Update the tag in the slice
+			return nil
+		}
+	}
+	return errors.New("tag not found")
 }
 
 // Helper function to create a test todo

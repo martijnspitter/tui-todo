@@ -10,8 +10,6 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
-type todoDeletedMsg struct{}
-
 type ConfirmDeleteModel struct {
 	service      *service.AppService
 	tuiService   *service.TuiService
@@ -19,12 +17,13 @@ type ConfirmDeleteModel struct {
 	cancelButton Button
 	sendButton   Button
 	focused      int
-	todoID       int64
+	entityID     int64
 	width        int
 	height       int
+	deleteTag    bool
 }
 
-func NewConfirmDeleteModal(appService *service.AppService, tuiService *service.TuiService, translationService *i18n.TranslationService, todoID int64) *ConfirmDeleteModel {
+func NewConfirmDeleteModal(appService *service.AppService, tuiService *service.TuiService, translationService *i18n.TranslationService, entityID int64, deleteTag bool) *ConfirmDeleteModel {
 	normalStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color(theme.SubtextColor)).
 		Padding(0, 1)
@@ -43,7 +42,7 @@ func NewConfirmDeleteModal(appService *service.AppService, tuiService *service.T
 		service:    appService,
 		tuiService: tuiService,
 		translator: translationService,
-		todoID:     todoID,
+		entityID:   entityID,
 		cancelButton: Button{
 			Label:        translationService.T("button.cancel"),
 			Focused:      true,
@@ -55,17 +54,8 @@ func NewConfirmDeleteModal(appService *service.AppService, tuiService *service.T
 			Style:        normalStyle,
 			FocusedStyle: focusedStyle,
 		},
-		focused: 0, // Start with cancel button focused
-	}
-}
-
-func (m *ConfirmDeleteModel) deleteTodoCmd() tea.Cmd {
-	return func() tea.Msg {
-		err := m.service.DeleteTodo(m.todoID)
-		if err != nil {
-			return TodoErrorMsg{err: err}
-		}
-		return todoDeletedMsg{}
+		focused:   0, // Start with cancel button focused
+		deleteTag: deleteTag,
 	}
 }
 
@@ -96,6 +86,10 @@ func (m *ConfirmDeleteModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// If enter is pressed, trigger the appropriate command based on focus
 			if m.focused == 0 {
 				return m, CloseModalCmd(false)
+			}
+			if m.deleteTag {
+				// If deleting a tag, call the deleteTagCmd
+				return m, m.deleteTagCmd()
 			}
 			return m, m.deleteTodoCmd()
 		}
@@ -140,4 +134,33 @@ func (m *ConfirmDeleteModel) View() string {
 		lipgloss.Center,
 		modalStyle.Render(content),
 	)
+}
+
+// ===========================================================================
+// Messages
+// ===========================================================================
+type todoDeletedMsg struct{}
+type tagDeletedMsg struct{}
+
+// ===========================================================================
+// Commands
+// ===========================================================================
+func (m *ConfirmDeleteModel) deleteTodoCmd() tea.Cmd {
+	return func() tea.Msg {
+		err := m.service.DeleteTodo(m.entityID)
+		if err != nil {
+			return TodoErrorMsg{err: err}
+		}
+		return todoDeletedMsg{}
+	}
+}
+
+func (m *ConfirmDeleteModel) deleteTagCmd() tea.Cmd {
+	return func() tea.Msg {
+		err := m.service.DeleteTag(m.entityID)
+		if err != nil {
+			return TodoErrorMsg{err: err}
+		}
+		return tagDeletedMsg{}
+	}
 }

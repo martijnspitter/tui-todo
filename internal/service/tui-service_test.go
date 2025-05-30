@@ -235,7 +235,7 @@ func TestViewSwitchingMethods(t *testing.T) {
 		{
 			name:         "Switch to edit todo view",
 			switchFunc:   func(s *service.TuiService) { s.SwitchToEditTodoView() },
-			expectedView: service.AddEditModal,
+			expectedView: service.AddEditTodoModal,
 		},
 		{
 			name:         "Switch to confirm delete view",
@@ -295,7 +295,7 @@ func TestShouldShowModal(t *testing.T) {
 		},
 		{
 			name:        "Add/Edit modal is modal",
-			view:        service.AddEditModal,
+			view:        service.AddEditTodoModal,
 			expectModal: true,
 		},
 		{
@@ -387,7 +387,7 @@ func TestSwitchToListView(t *testing.T) {
 	}{
 		{
 			name:         "Return to DoingPane when it was previous tab",
-			initialView:  service.AddEditModal,
+			initialView:  service.AddEditTodoModal,
 			prevView:     service.DoingPane,
 			expectedView: service.DoingPane,
 		},
@@ -399,7 +399,7 @@ func TestSwitchToListView(t *testing.T) {
 		},
 		{
 			name:         "Return to DonePane when it was previous tab",
-			initialView:  service.AddEditModal,
+			initialView:  service.AddEditTodoModal,
 			prevView:     service.DonePane,
 			expectedView: service.DonePane,
 		},
@@ -411,13 +411,13 @@ func TestSwitchToListView(t *testing.T) {
 		},
 		{
 			name:         "Default to OpenPane when previous view was not a tab",
-			initialView:  service.AddEditModal,
+			initialView:  service.AddEditTodoModal,
 			prevView:     service.ConfirmDeleteModal, // Non-tab previous view
 			expectedView: service.OpenPane,
 		},
 		{
 			name:         "Default to OpenPane when previous view is invalid",
-			initialView:  service.AddEditModal,
+			initialView:  service.AddEditTodoModal,
 			prevView:     99, // Invalid view type
 			expectedView: service.OpenPane,
 		},

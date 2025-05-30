@@ -16,6 +16,7 @@ var (
 	TextStyle    = lipgloss.NewStyle().Foreground(theme.TextColor)
 	SubtextStyle = lipgloss.NewStyle().Foreground(theme.SubtextColor)
 	EmptyStyle   = lipgloss.NewStyle().Foreground(theme.Green)
+	WarningStyle = lipgloss.NewStyle().Foreground(theme.ErrorColor)
 
 	BorderWidth = 1
 	Padding     = 1
