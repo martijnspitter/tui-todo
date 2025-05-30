@@ -183,6 +183,20 @@ func (m *MockTodoRepository) DeleteTag(id int64) error {
 	return errors.New("tag not found")
 }
 
+func (m *MockTodoRepository) UpdateTag(tag *models.Tag) error {
+	if m.MockError != nil {
+		return m.MockError
+	}
+	// Simulate tag update
+	for i, existingTag := range m.MockTags {
+		if existingTag.ID == tag.ID {
+			m.MockTags[i] = *tag // Update the tag in the slice
+			return nil
+		}
+	}
+	return errors.New("tag not found")
+}
+
 // Helper function to create a test todo
 func createTestTodo(id int64) *models.Todo {
 	now := time.Now()

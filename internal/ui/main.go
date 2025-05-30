@@ -6,7 +6,6 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
@@ -25,6 +24,7 @@ type MainModel struct {
 	header         tea.Model
 	today          tea.Model
 	todos          tea.Model
+	tags           tea.Model
 }
 
 func NewMainModel(appService *service.AppService, translationService *i18n.TranslationService) *MainModel {
@@ -34,6 +34,7 @@ func NewMainModel(appService *service.AppService, translationService *i18n.Trans
 	header := NewHeaderModel(tuiService, translationService)
 	today := NewTodayModel(appService, tuiService, translationService)
 	todos := NewTodosModel(appService, tuiService, translationService)
+	tags := NewTagsModel(appService, tuiService, translationService)
 
 	// Create model
 	m := &MainModel{
@@ -44,6 +45,7 @@ func NewMainModel(appService *service.AppService, translationService *i18n.Trans
 		footer:     footer,
 		header:     header,
 		today:      today,
+		tags:       tags,
 	}
 
 	return m
@@ -60,6 +62,8 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case LoadTodosMsg:
 		return m, m.loadTodosCmd()
+	case LoadTagsMsg:
+		return m, m.loadTagsCmd()
 	case tea.KeyMsg:
 		if m.tuiService.ShouldShowModal() {
 			// Handle modal
@@ -75,7 +79,7 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg,
 			m.tuiService.KeyMap.Quit,
 		):
-			if m.tuiService.CurrentView == service.AddEditModal {
+			if m.tuiService.CurrentView == service.AddEditTodoModal {
 				m.tuiService.SwitchToListView()
 			} else if m.tuiService.FilterState.IsFilterActive {
 				m.tuiService.RemoveNameFilter()
@@ -158,6 +162,11 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.reload {
 			cmds = append(cmds, m.loadTodosCmd())
 		}
+	case tagModalCloseMsg:
+		m.tuiService.SwitchToTagsView()
+		if msg.reload {
+			cmds = append(cmds, m.loadTagsCmd())
+		}
 
 	case UpdateCheckCompletedMsg:
 		if msg.ForceUpdate {
@@ -181,6 +190,9 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.todos, cmd = m.todos.Update(msg)
 	cmds = append(cmds, cmd)
 
+	m.tags, cmd = m.tags.Update(msg)
+	cmds = append(cmds, cmd)
+
 	if m.tuiService.ShouldShowModal() && m.modalComponent != nil {
 		m.modalComponent, cmd = m.modalComponent.Update(msg)
 		cmds = append(cmds, cmd)
@@ -200,17 +212,21 @@ func (m *MainModel) View() string {
 	header := m.header.View()
 	footer := m.footer.View()
 	todos := m.todos.View()
+	tags := m.tags.View()
 
 	headerHeight := lipgloss.Height(header)
 	footerHeight := lipgloss.Height(footer)
 
 	contentHeight := m.height - headerHeight - footerHeight - 3
 	m.todos.(*TodosModel).SetHeight(contentHeight)
+	m.tags.(*TagsModel).SetHeight(contentHeight)
 
 	// Main list
 	listView := ""
 	if m.tuiService.CurrentView == service.TodayPane {
 		listView = m.today.View()
+	} else if m.tuiService.CurrentView == service.TagsPane {
+		listView = tags
 	} else {
 		listView = todos
 	}
@@ -229,7 +245,6 @@ func (m *MainModel) View() string {
 // Helpers
 // ===========================================================================
 func truncateString(s string, length int) string {
-	log.Debug("s", s, "length", length)
 	if length <= 0 {
 		return ""
 	}
@@ -247,6 +262,9 @@ type todoToggleArchived struct {
 }
 type todosLoadedMsg struct {
 	todos []*models.Todo
+}
+type tagsLoadedMsg struct {
+	tags []*models.Tag
 }
 
 type todoCreatedMsg struct{}
@@ -272,12 +290,16 @@ func (e TodoErrorMsg) Error() string {
 type modalCloseMsg struct {
 	reload bool
 }
+type tagModalCloseMsg struct {
+	reload bool
+}
 
 type UpdateCheckCompletedMsg struct {
 	ForceUpdate bool
 }
 
 type LoadTodosMsg struct{}
+type LoadTagsMsg struct{}
 
 type RemoveFilterMsg struct{}
 
@@ -290,6 +312,10 @@ func (m *MainModel) loadTodosCmd() tea.Cmd {
 			return GetTodayDataMsg{}
 		}
 
+		if m.tuiService.CurrentView == service.TagsPane {
+			return LoadTagsMsg{}
+		}
+
 		todos, err := m.service.GetFilteredTodos(
 			m.tuiService.CurrentView,
 			m.tuiService.FilterState.IncludeArchived,
@@ -300,6 +326,17 @@ func (m *MainModel) loadTodosCmd() tea.Cmd {
 		}
 
 		return todosLoadedMsg{todos: todos}
+	}
+}
+
+func (m *MainModel) loadTagsCmd() tea.Cmd {
+	return func() tea.Msg {
+		tags, err := m.service.GetAllTags()
+		if err != nil {
+			return TodoErrorMsg{err: err}
+		}
+
+		return tagsLoadedMsg{tags: tags}
 	}
 }
 
@@ -337,8 +374,16 @@ func (m *MainModel) showAboutModalCmd() tea.Cmd {
 	}
 }
 
-func InitCmd() tea.Msg {
-	return LoadTodosMsg{}
+func InitTodosCmd() tea.Cmd {
+	return func() tea.Msg {
+		return LoadTodosMsg{}
+	}
+}
+
+func InitTagsCmd() tea.Cmd {
+	return func() tea.Msg {
+		return LoadTagsMsg{}
+	}
 }
 
 func RemoveFilterCmd() tea.Cmd {

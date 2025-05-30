@@ -60,19 +60,22 @@ func (m *HeaderModel) View() string {
 	leftContent := lipgloss.JoinHorizontal(lipgloss.Center, leftTabs...)
 
 	isAllSelected := m.tuiService.CurrentView == service.AllPane
-	allTab := styling.GetStyledTagWithIndicator(5, m.translator.T("filter.all"), theme.Rosewater, isAllSelected, false, false)
+	allTab := styling.GetStyledTagWithIndicator(6, m.translator.T("filter.all"), theme.Rosewater, isAllSelected, false, false)
+
+	isTagsSelected := m.tuiService.CurrentView == service.TagsPane
+	tagsTab := styling.GetStyledTagWithIndicator(7, m.translator.T("filter.tags"), theme.Teal, isTagsSelected, false, false)
 
 	const minGap = 2
 	availableWidth := m.width - 2 // -2 for padding
 	leftWidth := lipgloss.Width(leftContent)
-	rightWidth := lipgloss.Width(allTab)
+	rightWidth := lipgloss.Width(allTab) + lipgloss.Width(tagsTab)
 
 	if leftWidth+minGap+rightWidth >= availableWidth {
-		return lipgloss.JoinHorizontal(lipgloss.Center, leftContent, allTab)
+		return lipgloss.JoinHorizontal(lipgloss.Center, leftContent, allTab, tagsTab)
 	}
 
 	spacerWidth := availableWidth - leftWidth - rightWidth
 	spacer := strings.Repeat(" ", spacerWidth)
 
-	return lipgloss.JoinHorizontal(lipgloss.Center, leftContent, spacer, allTab)
+	return lipgloss.JoinHorizontal(lipgloss.Center, leftContent, spacer, allTab, tagsTab)
 }

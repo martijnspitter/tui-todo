@@ -26,6 +26,7 @@ type TodoRepository interface {
 	RemoveTagFromTodo(id int64, tageName string) error
 	GetAllTags() ([]*models.Tag, error)
 	DeleteTag(id int64) error
+	UpdateTag(tag *models.Tag) error
 }
 
 // Filter returns a WHERE clause fragment and associated arguments

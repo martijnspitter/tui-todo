@@ -350,6 +350,20 @@ func (s *AppService) DeleteTag(id int64) error {
 	return nil
 }
 
+func (s *AppService) UpdateTag(tag *models.Tag) error {
+	// Update the tag in the repository
+	err := s.todoRepo.UpdateTag(tag)
+	if err != nil {
+		log.Error("Failed to update tag", "error", err, "tag", tag.Name)
+		return fmt.Errorf("error.tag_update_failed")
+	}
+
+	// Notify that the tag has been updated
+	s.notify(socket_sync.TodoUpdated, tag.ID)
+
+	return nil
+}
+
 // ===========================================================================
 // Due date  methods
 // ===========================================================================

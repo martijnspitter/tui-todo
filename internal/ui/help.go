@@ -53,14 +53,14 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 	contextKeyMap := keys.NewHelpKeyMap(m.translator)
 
 	// Always show these keys regardless of context when not filtering
-	if !filterState.IsFilterActive && currentView != service.AddEditModal && currentView != service.AboutModal {
+	if !filterState.IsFilterActive && currentView != service.AddEditTodoModal && currentView != service.AddEditTagModal && currentView != service.AboutModal {
 		contextKeyMap.AddBindingInShort(baseKeyMap.Help)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Quit)
 	}
 
 	// Add view-specific bindings
 	switch currentView {
-	case service.OpenPane, service.DoingPane, service.DonePane, service.AllPane:
+	case service.OpenPane, service.DoingPane, service.DonePane, service.AllPane, service.BlockedPane:
 		if filterState.IsFilterActive {
 			contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
 		} else {
@@ -92,12 +92,16 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 			contextKeyMap.AddBindingInFull(baseKeyMap.ToggleArchived)
 		}
 
-	case service.AddEditModal:
+	case service.AddEditTodoModal:
 		// Edit view shows edit-specific keys
 		contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Next)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Prev)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Select)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Save)
+
+	case service.AddEditTagModal:
+		contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Save)
 
 	case service.ConfirmDeleteModal:

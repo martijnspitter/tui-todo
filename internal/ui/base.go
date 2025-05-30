@@ -24,7 +24,7 @@ func NewBaseModel(service *service.AppService, translationService *i18n.Translat
 }
 
 func (m *BaseModel) Init() tea.Cmd {
-	return InitCmd
+	return tea.Batch(InitTodosCmd(), InitTagsCmd())
 }
 
 func (m *BaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

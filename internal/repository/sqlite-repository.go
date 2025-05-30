@@ -554,7 +554,7 @@ func (r *SQLiteTodoRepository) GetAllTags() ([]*models.Tag, error) {
 	var tags []*models.Tag
 	for rows.Next() {
 		tag := &models.Tag{}
-		if err := rows.Scan(&tag); err != nil {
+		if err := rows.Scan(&tag.ID, &tag.Name); err != nil {
 			return nil, err
 		}
 		tags = append(tags, tag)
@@ -581,6 +581,26 @@ func (r *SQLiteTodoRepository) DeleteTag(id int64) error {
 		return err
 	}
 
+	return tx.Commit()
+}
+
+// UpdateTag updates an existing tag
+func (r *SQLiteTodoRepository) UpdateTag(tag *models.Tag) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare("UPDATE tags SET name = ? WHERE id = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(tag.Name, tag.ID)
+	if err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 

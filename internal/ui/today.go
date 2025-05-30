@@ -159,7 +159,7 @@ func (m *TodayDashboardModel) renderDashboard() string {
 			Width(contentWidth).
 			Render(lipgloss.JoinVertical(
 				lipgloss.Left,
-				EmptyStateView(m.translator, contentWidth, 13),
+				EmptySuccessStateView(m.translator, contentWidth, 13),
 			))
 		content := lipgloss.JoinVertical(
 			lipgloss.Left,

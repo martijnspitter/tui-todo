@@ -5,7 +5,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
@@ -113,7 +112,6 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for i, todo := range msg.todos {
 			items[i] = &TodoItem{todo: todo, tuiService: m.tuiService}
 		}
-		log.Debug("list", "items", "count", len(items))
 		cmd := m.list.SetItems(items)
 		cmds = append(cmds, cmd)
 	}
@@ -127,7 +125,11 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m *TodosModel) View() string {
 	listView := lipgloss.NewStyle().Width(m.width - 2).Padding(styling.Padding).Render(m.list.View())
 	if len(m.list.Items()) == 0 {
-		listView = EmptyStateView(m.translator, m.width, m.height)
+		if m.tuiService.CurrentView == service.AllPane || m.tuiService.CurrentView == service.BlockedPane {
+			listView = EmptyNothingFoundView(m.translator, m.width, m.height)
+		} else {
+			listView = EmptySuccessStateView(m.translator, m.width, m.height)
+		}
 	}
 
 	return listView
@@ -137,7 +139,7 @@ func (m *TodosModel) View() string {
 // Helpers
 // ===========================================================================
 func (m *TodosModel) shouldAllowTodoCrud() bool {
-	return m.list.SelectedItem() != nil && m.tuiService.CurrentView != service.TodayPane
+	return m.list.SelectedItem() != nil && m.tuiService.CurrentView != service.TodayPane && m.tuiService.CurrentView != service.TagsPane
 }
 
 func (m *TodosModel) SetHeight(height int) {
@@ -172,7 +174,7 @@ func (m *TodosModel) showEditModalCmd(todo *models.Todo) tea.Cmd {
 func (m *TodosModel) showConfirmDeleteCmd(todoID int64) tea.Cmd {
 	return func() tea.Msg {
 		m.tuiService.SwitchToConfirmDeleteView()
-		modalComponent := NewConfirmDeleteModal(m.service, m.tuiService, m.translator, todoID)
+		modalComponent := NewConfirmDeleteModal(m.service, m.tuiService, m.translator, todoID, false)
 		return showModalMsg{
 			modal: modalComponent,
 		}
