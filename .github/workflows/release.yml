@@ -22,18 +22,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: stable
-      - name: Install Snapcraft
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y snapcraft
-      # More assembly might be required: Docker logins, GPG, etc.
-      # It all depends on your needs.
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
-          # either 'goreleaser' (default) or 'goreleaser-pro'
           distribution: goreleaser
-          # 'latest', 'nightly', or a semver
           version: "v2.9.0"
           args: release --clean --timeout=10m
         env:
