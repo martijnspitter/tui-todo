@@ -5,7 +5,6 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/log"
 	"github.com/martijnspitter/tui-todo/internal/i18n"
 	"github.com/martijnspitter/tui-todo/internal/models"
 	"github.com/martijnspitter/tui-todo/internal/service"
@@ -23,7 +22,7 @@ type TagsModel struct {
 
 func NewTagsModel(service *service.AppService, tuiService *service.TuiService, translator *i18n.TranslationService) *TagsModel {
 	// Setup list
-	tagList := list.New([]list.Item{}, TagModel{}, 0, 0)
+	tagList := list.New([]list.Item{}, TagModel{tuiService, translator}, 0, 0)
 	tagList.Title = ""
 	tagList.DisableQuitKeybindings()
 	tagList.SetShowTitle(false)
@@ -66,8 +65,8 @@ func (m *TagsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case key.Matches(msg, m.tuiService.KeyMap.New):
 			// Create new Todo
-			if m.shouldAllowTagCrud() {
-				tag := &models.Tag{}
+			if m.tuiService.CurrentView == service.TagsPane {
+				tag := &models.Tag{ID: -1}
 				return m, m.showEditModalCmd(tag)
 			}
 		}
@@ -76,7 +75,6 @@ func (m *TagsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	case tagsLoadedMsg:
 		// Update the list with new tags
-		log.Debug("msg.tags", msg.tags)
 		items := make([]list.Item, len(msg.tags))
 		for i, tag := range msg.tags {
 			items[i] = &TagItem{tag: tag}
@@ -124,7 +122,7 @@ func (m *TagsModel) SetHeight(height int) {
 // ===========================================================================
 func (m *TagsModel) showEditModalCmd(tag *models.Tag) tea.Cmd {
 	return func() tea.Msg {
-		m.tuiService.SwitchToEditTodoView()
+		m.tuiService.SwitchToEditTagView()
 		modalComponent := NewTagEditModal(tag, m.width, m.height, m.service, m.tuiService, m.translator)
 		return showModalMsg{
 			modal: modalComponent,

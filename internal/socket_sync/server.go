@@ -321,5 +321,5 @@ func (s *Server) logStatus() {
 	s.clientsMutex.RLock()
 	count := len(s.clients)
 	s.clientsMutex.RUnlock()
-	log.Debug("Sync server status", "connected_clients", count)
+	log.Info("Sync server status", "connected_clients", count)
 }

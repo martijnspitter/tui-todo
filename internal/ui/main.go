@@ -79,7 +79,7 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			msg,
 			m.tuiService.KeyMap.Quit,
 		):
-			if m.tuiService.CurrentView == service.AddEditTodoModal {
+			if m.tuiService.CurrentView == service.AddEditTodoModal || m.tuiService.CurrentView == service.AddEditTagModal {
 				m.tuiService.SwitchToListView()
 			} else if m.tuiService.FilterState.IsFilterActive {
 				m.tuiService.RemoveNameFilter()

@@ -56,7 +56,7 @@ func (s *AppService) SetSyncManager(manager *socket_sync.Manager) {
 // ===========================================================================
 func (s *AppService) SaveTodo(todo *models.Todo, tags []string) error {
 	// Service decides whether to create or update based on ID or other criteria
-	if todo.ID == 0 {
+	if todo.ID < 0 {
 		// Create new
 		return s.CreateTodo(todo.Title, todo.Description, todo.Priority, tags, todo.DueDate, todo.Status)
 	} else {
@@ -329,12 +329,12 @@ func (s *AppService) GetAllTags() ([]*models.Tag, error) {
 }
 
 // CreateTag creates a new tag in the system
-func (s *AppService) CreateTag(tagName string) error {
+func (s *AppService) CreateTag(tag *models.Tag) error {
 	// We can reuse the AddTagToTodo method with ID 0
 	// The tag will be created if it doesn't exist
-	err := s.todoRepo.AddTagToTodo(0, tagName)
+	err := s.todoRepo.CreateTag(tag)
 	if err != nil {
-		log.Error("Failed to create tag", "error", err, "tag", tagName)
+		log.Error("Failed to create tag", "error", err, "tag", tag)
 		return fmt.Errorf("error.tag_create_failed")
 	}
 	return nil
@@ -728,7 +728,7 @@ func (s *AppService) GetFilteredTodos(currentView ViewType, showArchived bool) (
 	case AllPane:
 		todos, err = s.GetAllTodos(showArchived)
 	default:
-		err = fmt.Errorf("error.unknown")
+		log.Info("Unknown view", currentView)
 	}
 
 	if err != nil {

@@ -72,7 +72,7 @@ func (m *Manager) Start() error {
 		log.Info("This instance is the primary (server)")
 	} else {
 		// Failed to create server, we are a secondary instance
-		log.Debug("Failed to create server", "error", err)
+		log.Info("Failed to create server", "error", err)
 		log.Info("This instance is a secondary (client)")
 
 		// Wait a brief moment to ensure the server is ready

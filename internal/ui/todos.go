@@ -93,9 +93,11 @@ func (m *TodosModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, m.blockTodoCmd(item.todo.ID, isCurrentlyBlocked)
 			}
 		case key.Matches(msg, m.tuiService.KeyMap.New):
-			// Create new Todo
-			todo := &models.Todo{}
-			return m, m.showEditModalCmd(todo)
+			if m.tuiService.CurrentView != service.TagsPane {
+				// Create new Todo
+				todo := &models.Todo{ID: -1}
+				return m, m.showEditModalCmd(todo)
+			}
 		}
 	case RemoveFilterMsg:
 		m.list, cmd = m.list.Update(msg)

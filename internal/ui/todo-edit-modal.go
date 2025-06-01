@@ -16,6 +16,7 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
 	"github.com/martijnspitter/tui-todo/internal/theme"
+	"slices"
 )
 
 type editState int
@@ -72,7 +73,7 @@ func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.
 	}
 
 	// Create tag selector with selected tags
-	tagSelector := NewTagSelector(todo.Tags, allTags)
+	tagSelector := NewTagSelector(todo.Tags, allTags, tuiService, translationService)
 
 	dueDateInput := textinput.New()
 	dueDateInput.Placeholder = "YYYY-MM-DD HH:MM (e.g. 2023-12-31 15:30)"
@@ -116,12 +117,15 @@ func (m *TodoEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, func() tea.Msg { return modalCloseMsg{reload: false} }
 
 		case key.Matches(msg, m.tuiService.KeyMap.Next):
-			// Cycle through edit states
-			m.goForward()
+			if m.editState != editingTags {
+				// Cycle through edit states
+				m.goForward()
+			}
 		case key.Matches(msg, m.tuiService.KeyMap.Prev):
-			// Cycle through edit states
-			m.goBack()
-
+			if m.editState != editingTags {
+				// Cycle through edit states
+				m.goBack()
+			}
 		case key.Matches(msg, m.tuiService.KeyMap.Select):
 			switch m.editState {
 			case editingPriorityLow:
@@ -151,6 +155,10 @@ func (m *TodoEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+	case GoBackMsg:
+		m.goBack()
+	case GoForwardMsg:
+		m.goForward()
 	}
 
 	// Update active input based on state
@@ -164,18 +172,6 @@ func (m *TodoEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 	case editingTags:
 		m.tagsInput, cmd = m.tagsInput.Update(msg)
-
-		// Check if a new tag was created and add it to the database
-		if newTag, created := m.tagsInput.CreateTag(); created {
-			cmds = append(cmds, func() tea.Msg {
-				err := m.appService.CreateTag(newTag)
-				if err != nil {
-					return TodoErrorMsg{err: err}
-				}
-				return nil
-			})
-		}
-
 		cmds = append(cmds, cmd)
 	case editingDueDate:
 		m.dueDateInput, cmd = m.dueDateInput.Update(msg)
@@ -267,7 +263,7 @@ func (m *TodoEditModal) View() string {
 
 	updatedAtHeader := ""
 	updatedAt := ""
-	if m.todo.ID != 0 {
+	if m.todo.ID >= 0 {
 		updatedAtHeader = m.translator.T("field.updated_at")
 		translatedUpdatedAt := m.translator.Tf("ui.updated", map[string]interface{}{"Time": m.todo.UpdatedAt.Format(time.Stamp)})
 		updatedAtField := styling.GetStyledUpdatedAt(translatedUpdatedAt)
@@ -275,7 +271,7 @@ func (m *TodoEditModal) View() string {
 	}
 
 	header := m.translator.T("modal.new_todo")
-	if m.todo.ID != 0 {
+	if m.todo.ID >= 0 {
 		text := m.translator.Tf("modal.edit_todo", map[string]interface{}{"ID": m.todo.ID})
 		timeSpendText := m.translator.Tf("ui.time_spent", map[string]interface{}{"Time": m.todo.FormatTimeSpent()})
 		timeSpend := styling.GetTimeSpend(timeSpendText)
@@ -349,7 +345,6 @@ func (m *TodoEditModal) goBack() {
 		m.titleInput.Focus()
 	case editingTags:
 		m.descInput.Focus()
-		m.tagsInput.Blur()
 	case editingDueDate:
 		m.tagsInput.Focus()
 		m.dueDateInput.Blur()
@@ -363,6 +358,12 @@ func (m *TodoEditModal) goBack() {
 		m.editState = m.editState - 1
 	}
 }
+
+// ===========================================================================
+// Messages
+// ===========================================================================
+type GoBackMsg struct{}
+type GoForwardMsg struct{}
 
 // ===========================================================================
 // Commands
@@ -401,6 +402,18 @@ func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 	}
 }
 
+func GoToPreviousEditState() tea.Cmd {
+	return func() tea.Msg {
+		return GoBackMsg{}
+	}
+}
+
+func GoToNextEditState() tea.Cmd {
+	return func() tea.Msg {
+		return GoForwardMsg{}
+	}
+}
+
 // ===========================================================================
 // Tag Selector
 // ===========================================================================
@@ -409,20 +422,17 @@ type TagSelector struct {
 	availableTags []*models.Tag
 	focused       bool
 	cursor        int
-	newTagInput   textinput.Model
-	creatingTag   bool
 	tuiService    *service.TuiService
+	translator    *i18n.TranslationService
 }
 
-func NewTagSelector(selectedTags []string, availableTags []*models.Tag) *TagSelector {
-	input := textinput.New()
-	input.Placeholder = "Enter new tag name"
-
+func NewTagSelector(selectedTags []string, availableTags []*models.Tag, tuiService *service.TuiService, translator *i18n.TranslationService) *TagSelector {
 	return &TagSelector{
 		selectedTags:  selectedTags,
 		availableTags: availableTags,
-		cursor:        0,
-		newTagInput:   input,
+		cursor:        -1,
+		tuiService:    tuiService,
+		translator:    translator,
 	}
 }
 
@@ -432,28 +442,25 @@ func (ts *TagSelector) Focus() {
 
 func (ts *TagSelector) Blur() {
 	ts.focused = false
-	ts.creatingTag = false
-	ts.newTagInput.Blur()
 }
 
 func (ts *TagSelector) Update(msg tea.Msg) (*TagSelector, tea.Cmd) {
-	var cmd tea.Cmd
-
-	if ts.creatingTag {
-		ts.newTagInput, cmd = ts.newTagInput.Update(msg)
-		return ts, cmd
-	}
-
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, ts.tuiService.KeyMap.Up):
+		case key.Matches(msg, ts.tuiService.KeyMap.Prev):
 			if ts.cursor > 0 {
 				ts.cursor--
+			} else {
+				ts.cursor = -1
+				return ts, GoToPreviousEditState()
 			}
-		case key.Matches(msg, ts.tuiService.KeyMap.Down):
+		case key.Matches(msg, ts.tuiService.KeyMap.Next):
 			if ts.cursor < len(ts.availableTags)-1 {
 				ts.cursor++
+			} else {
+				ts.cursor = len(ts.availableTags)
+				return ts, GoToNextEditState()
 			}
 		case key.Matches(msg, ts.tuiService.KeyMap.Select):
 			// Toggle selected status of the current tag
@@ -462,7 +469,7 @@ func (ts *TagSelector) Update(msg tea.Msg) (*TagSelector, tea.Cmd) {
 				// Remove tag
 				for i, tag := range ts.selectedTags {
 					if tag == currentTag.Name {
-						ts.selectedTags = append(ts.selectedTags[:i], ts.selectedTags[i+1:]...)
+						ts.selectedTags = slices.Delete(ts.selectedTags, i, i+1)
 						break
 					}
 				}
@@ -470,62 +477,25 @@ func (ts *TagSelector) Update(msg tea.Msg) (*TagSelector, tea.Cmd) {
 				// Add tag
 				ts.selectedTags = append(ts.selectedTags, currentTag.Name)
 			}
-		case key.Matches(msg, ts.tuiService.KeyMap.New):
-			// Create new tag
-			ts.creatingTag = true
-			ts.newTagInput.Focus()
-			return ts, textinput.Blink
 		}
 	}
 
 	return ts, nil
 }
 
-func (ts *TagSelector) CreateTag() (string, bool) {
-	if ts.creatingTag && ts.newTagInput.Value() != "" {
-		newTag := strings.TrimSpace(ts.newTagInput.Value())
-		ts.newTagInput.SetValue("")
-		ts.creatingTag = false
-
-		// Check if tag already exists
-		for _, tag := range ts.availableTags {
-			if tag.Name == newTag {
-				// Tag already exists, select it
-				ts.selectedTags = append(ts.selectedTags, newTag)
-				return "", false
-			}
-		}
-
-		// Add to available and selected tags
-		ts.availableTags = append(ts.availableTags, &models.Tag{Name: newTag})
-		ts.selectedTags = append(ts.selectedTags, newTag)
-		return newTag, true
-	}
-	return "", false
-}
-
 func (ts *TagSelector) IsSelected(tag string) bool {
-	for _, t := range ts.selectedTags {
-		if t == tag {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(ts.selectedTags, tag)
 }
 
 func (ts *TagSelector) View() string {
-	if ts.creatingTag {
-		return fmt.Sprintf("Create new tag:\n%s\n(Enter to add, Esc to cancel)", ts.newTagInput.View())
-	}
-
 	var sb strings.Builder
 
 	if len(ts.availableTags) == 0 {
-		sb.WriteString("No tags available. Press 'n' to create a new tag.")
+		sb.WriteString("No tags available.")
 		return sb.String()
 	}
 
-	sb.WriteString("Select tags (space to toggle, n to create new):\n\n")
+	sb.WriteString("Select tags:\n\n")
 
 	for i, tag := range ts.availableTags {
 		cursor := " "
@@ -535,10 +505,10 @@ func (ts *TagSelector) View() string {
 
 		checked := "[ ]"
 		if ts.IsSelected(tag.Name) {
-			checked = "[x]"
+			checked = "[✓]"
 		}
 
-		sb.WriteString(fmt.Sprintf("%s %s %s\n", cursor, checked, tag))
+		sb.WriteString(fmt.Sprintf("%s %s %s\n", cursor, checked, styling.GetStyledTag(tag.Name)))
 	}
 
 	return sb.String()

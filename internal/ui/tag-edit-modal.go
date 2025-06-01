@@ -24,32 +24,41 @@ const (
 
 // TagEditModal allows viewing and managing tags
 type TagEditModal struct {
-	tag        *models.Tag
-	nameInput  textinput.Model
-	width      int
-	height     int
-	appService *service.AppService
-	tuiService *service.TuiService
-	translator *i18n.TranslationService
-	help       tea.Model
+	tag               *models.Tag
+	nameInput         textinput.Model
+	descInput         textinput.Model
+	nameInputSelected bool
+	width             int
+	height            int
+	appService        *service.AppService
+	tuiService        *service.TuiService
+	translator        *i18n.TranslationService
+	help              tea.Model
 }
 
 func NewTagEditModal(tag *models.Tag, width, height int, appService *service.AppService, tuiService *service.TuiService, translationService *i18n.TranslationService) *TagEditModal {
 	help := NewHelpModel(appService, tuiService, translationService)
 
 	// Setup tag input for creating new tags
-	ti := textinput.New()
-	ti.Placeholder = translationService.T("tag.new_placeholder")
-	ti.CharLimit = 50
+	nameInput := textinput.New()
+	nameInput.Placeholder = translationService.T("field.name_placeholder")
+	nameInput.SetValue(tag.Name)
+	nameInput.Focus()
+	descInput := textinput.New()
+	descInput.SetValue(tag.Description)
+	descInput.Placeholder = translationService.T("field.description_placeholder")
 
 	return &TagEditModal{
-		nameInput:  ti,
-		width:      width,
-		height:     height,
-		appService: appService,
-		tuiService: tuiService,
-		translator: translationService,
-		help:       help,
+		tag:               tag,
+		nameInput:         nameInput,
+		descInput:         descInput,
+		nameInputSelected: true,
+		width:             width,
+		height:            height,
+		appService:        appService,
+		tuiService:        tuiService,
+		translator:        translationService,
+		help:              help,
 	}
 }
 
@@ -64,6 +73,28 @@ func (m *TagEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, m.tuiService.KeyMap.Next):
+			// Switch focus between name and description inputs
+			if m.nameInputSelected {
+				m.nameInputSelected = false
+				m.nameInput.Blur()
+				m.descInput.Focus()
+			} else {
+				m.nameInputSelected = true
+				m.descInput.Blur()
+				m.nameInput.Focus()
+			}
+		case key.Matches(msg, m.tuiService.KeyMap.Prev):
+			// Switch focus back to name input
+			if !m.nameInputSelected {
+				m.nameInputSelected = true
+				m.descInput.Blur()
+				m.nameInput.Focus()
+			} else {
+				m.nameInputSelected = false
+				m.nameInput.Blur()
+				m.descInput.Focus()
+			}
 		case key.Matches(msg, m.tuiService.KeyMap.Quit):
 			// Close modal without saving
 			return m, func() tea.Msg { return modalCloseMsg{reload: false} }
@@ -75,8 +106,13 @@ func (m *TagEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 	}
 
-	m.nameInput, cmd = m.nameInput.Update(msg)
-	cmds = append(cmds, cmd)
+	if m.nameInputSelected {
+		m.nameInput, cmd = m.nameInput.Update(msg)
+		cmds = append(cmds, cmd)
+	} else {
+		m.descInput, cmd = m.descInput.Update(msg)
+		cmds = append(cmds, cmd)
+	}
 
 	return m, tea.Batch(cmds...)
 }
@@ -89,11 +125,27 @@ func (m *TagEditModal) View() string {
 		Width(m.width / 2).
 		BorderForeground(theme.Mauve)
 
+	title := m.translator.T("modal.new_tag")
+	if m.tag.ID >= 0 {
+		title = m.translator.Tf("modal.edit_tag", map[string]interface{}{"ID": m.tag.ID})
+	}
+	header := styling.TextStyle.Render(title)
+
+	nameTitle := m.translator.T("field.name")
+	descTitle := m.translator.T("field.description")
+	if m.nameInputSelected {
+		nameTitle = styling.FocusedStyle.Render(nameTitle)
+	} else {
+		descTitle = styling.FocusedStyle.Render(descTitle)
+	}
+
 	content := fmt.Sprintf(
-		"%s\n\n%s\n%s\n\n%s",
-		styling.FocusedStyle.Render(m.translator.T("tag.create_new")),
+		"%s\n\n%s\n%s\n\n%s\n%s\n\n%s",
+		header,
+		nameTitle,
 		m.nameInput.View(),
-		styling.TextStyle.Render(m.translator.T("tag.create_hint")),
+		descTitle,
+		m.descInput.View(),
 		m.help.View(),
 	)
 
@@ -119,21 +171,26 @@ func (m *TagEditModal) saveChangesCmd() tea.Cmd {
 			return TodoErrorMsg{err: fmt.Errorf("tag name cannot be empty")}
 		}
 
-		if m.tag != nil {
+		if m.tag.ID >= 0 {
 			// Update existing tag
 			m.tag.Name = name
+			m.tag.Description = m.descInput.Value()
 			err := m.appService.UpdateTag(m.tag)
 			if err != nil {
 				return TodoErrorMsg{err: err}
 			}
 		} else {
 			// Create new tag
-			err := m.appService.CreateTag(name)
+			tag := &models.Tag{
+				Name:        name,
+				Description: m.descInput.Value(),
+			}
+			err := m.appService.CreateTag(tag)
 			if err != nil {
 				return TodoErrorMsg{err: err}
 			}
 		}
 
-		return modalCloseMsg{reload: true}
+		return tagModalCloseMsg{reload: true}
 	}
 }

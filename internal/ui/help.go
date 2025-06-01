@@ -91,7 +91,25 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 			contextKeyMap.AddBindingInShort(baseKeyMap.ToggleArchived)
 			contextKeyMap.AddBindingInFull(baseKeyMap.ToggleArchived)
 		}
+	case service.TagsPane:
+		// Tags view shows tag-specific keys
+		// 	contextKeyMap.AddBindingInShort(baseKeyMap.New)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Filter)
 
+		contextKeyMap.AddBindingInFull(baseKeyMap.Up)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Down)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Filter)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Help)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Home)
+		contextKeyMap.AddBindingInFull(baseKeyMap.End)
+
+		contextKeyMap.AddBindingInFull(baseKeyMap.SwitchPane)
+
+		contextKeyMap.AddBindingInFull(baseKeyMap.New)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Edit)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Delete)
+
+		contextKeyMap.AddBindingInFull(baseKeyMap.About)
 	case service.AddEditTodoModal:
 		// Edit view shows edit-specific keys
 		contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
@@ -101,6 +119,8 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 		contextKeyMap.AddBindingInShort(baseKeyMap.Save)
 
 	case service.AddEditTagModal:
+		contextKeyMap.AddBindingInShort(baseKeyMap.Next)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Prev)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Save)
 

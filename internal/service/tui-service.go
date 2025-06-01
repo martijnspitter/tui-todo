@@ -152,7 +152,7 @@ func (t *TuiService) ToggleArchivedInAllView() {
 }
 
 func (t *TuiService) isPrevViewATab() bool {
-	return t.PrevView == TodayPane || t.PrevView == OpenPane || t.PrevView == DoingPane || t.PrevView == DonePane || t.PrevView == AllPane || t.PrevView == BlockedPane
+	return t.PrevView == TodayPane || t.PrevView == OpenPane || t.PrevView == DoingPane || t.PrevView == DonePane || t.PrevView == AllPane || t.PrevView == BlockedPane || t.PrevView == TagsPane
 }
 
 var (
@@ -172,6 +172,15 @@ func (t *TuiService) DetermineMaxWidthsForTodo(screenWidth, requiredItemsWidth, 
 	remainderW := availableW - leftW - float64(dueDateWidth)
 
 	return int(titleW), int(descriptionW), int(leftW), int(remainderW)
+}
+
+func (t *TuiService) DetermineMaxWidthsForTag(screenWidth, requiredItemsWidth int) (nameWidth, descriptionWidth int) {
+	availableW := float64(screenWidth - requiredItemsWidth)
+
+	nameW := max(availableW*maxWidthTitleRatio, minWidthTitle)
+	descriptionW := max((availableW-nameW)*maxWidthDescRatio, minWidthDesc)
+
+	return int(nameW), int(descriptionW)
 }
 
 func (t *TuiService) SwitchToUpdateModalView() {

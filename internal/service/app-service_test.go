@@ -197,6 +197,16 @@ func (m *MockTodoRepository) UpdateTag(tag *models.Tag) error {
 	return errors.New("tag not found")
 }
 
+func (m *MockTodoRepository) CreateTag(tag *models.Tag) error {
+	if m.MockError != nil {
+		return m.MockError
+	}
+	// Simulate tag creation
+	tag.ID = int64(len(m.MockTags) + 1) // Assign a new ID
+	m.MockTags = append(m.MockTags, *tag)
+	return nil
+}
+
 // Helper function to create a test todo
 func createTestTodo(id int64) *models.Todo {
 	now := time.Now()

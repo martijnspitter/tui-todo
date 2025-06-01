@@ -242,7 +242,7 @@ func (c *Client) Stop() error {
 	select {
 	case <-done:
 		// Clean shutdown completed
-		log.Debug("Sync client stopped successfully")
+		log.Info("Sync client stopped successfully")
 	case <-time.After(5 * time.Second):
 		log.Warn("Client shutdown timed out")
 	}
