@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/charmbracelet/bubbles/key"
@@ -160,7 +161,7 @@ func (m *TagEditModal) saveChangesCmd() tea.Cmd {
 	return func() tea.Msg {
 		name := m.nameInput.Value()
 		if name == "" {
-			return TodoErrorMsg{err: fmt.Errorf(m.translator.T("error.tag_name_empty"))}
+			return TodoErrorMsg{err: errors.New(m.translator.T("error.tag_name_empty"))}
 		}
 
 		if m.tag.ID >= 0 {

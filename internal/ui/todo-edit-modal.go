@@ -497,7 +497,7 @@ func (ts *TagSelector) View() string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString(ts.translator.T("feedback.no_tags_available") + "\n\n")
+	sb.WriteString(ts.translator.T("field.select_tags") + "\n\n")
 
 	for i, tag := range ts.availableTags {
 		cursor := " "
