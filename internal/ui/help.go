@@ -94,7 +94,7 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 		}
 	case service.TagsPane:
 		// Tags view shows tag-specific keys
-		// 	contextKeyMap.AddBindingInShort(baseKeyMap.New)
+		contextKeyMap.AddBindingInShort(baseKeyMap.New)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Filter)
 
 		contextKeyMap.AddBindingInFull(baseKeyMap.Up)
