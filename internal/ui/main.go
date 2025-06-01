@@ -218,8 +218,12 @@ func (m *MainModel) View() string {
 	footerHeight := lipgloss.Height(footer)
 
 	contentHeight := m.height - headerHeight - footerHeight - 3
-	m.todos.(*TodosModel).SetHeight(contentHeight)
-	m.tags.(*TagsModel).SetHeight(contentHeight)
+	if todosModel, ok := m.todos.(*TodosModel); ok {
+		todosModel.SetHeight(contentHeight)
+	}
+	if tagsModel, ok := m.tags.(*TagsModel); ok {
+		tagsModel.SetHeight(contentHeight)
+	}
 
 	// Main list
 	listView := ""

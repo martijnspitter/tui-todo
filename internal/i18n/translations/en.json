@@ -67,7 +67,8 @@
   "field.status": "Status",
   "field.updated_at": "Updated At",
   "field.name": "Name",
-  "field.name_placeholder": "Enter tag name",
+  "field.name_placeholder": "Enter Tag name",
+  "field.select_tags": "Select Tags:",
   "help.ctrl_n": "New",
   "help.ctrl_e": "Edit",
   "help.ctrl_d": "Delete",
@@ -118,7 +119,9 @@
   "error.unknown": "An unexpected error occurred",
   "error.unknown_view": "Unknown view",
   "error.update_from_done": "Cannot advance status further",
+  "error.tag_name_empty": "Tag name cannot be empty",
   "feedback.no_todos": "No Todos left.",
   "feedback.mission_accomplished": "Mission Accomplished!",
-  "feedback.nothing_found": "Nothing Found"
+  "feedback.nothing_found": "Nothing Found",
+  "feedback.no_tags_available": "No Tags Available. Start by creatig a tag on the tags pane"
 }

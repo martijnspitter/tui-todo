@@ -130,10 +130,10 @@ func (m *TagsModel) showEditModalCmd(tag *models.Tag) tea.Cmd {
 	}
 }
 
-func (m *TagsModel) showConfirmDeleteCmd(todoID int64) tea.Cmd {
+func (m *TagsModel) showConfirmDeleteCmd(tagID int64) tea.Cmd {
 	return func() tea.Msg {
 		m.tuiService.SwitchToConfirmDeleteView()
-		modalComponent := NewConfirmDeleteModal(m.service, m.tuiService, m.translator, todoID, true)
+		modalComponent := NewConfirmDeleteModal(m.service, m.tuiService, m.translator, tagID, true)
 		return showModalMsg{
 			modal: modalComponent,
 		}

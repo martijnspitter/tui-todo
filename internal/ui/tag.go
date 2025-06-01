@@ -33,6 +33,9 @@ func (i *TagItem) Description() string {
 }
 
 func (i *TagItem) FilterValue() string {
+	if i.tag == nil {
+		return ""
+	}
 	return i.tag.Name
 }
 
@@ -67,5 +70,5 @@ func (m TagModel) Render(w io.Writer, l list.Model, index int, listItem list.Ite
 		),
 	)
 
-	fmt.Fprintf(w, row)
+	fmt.Fprint(w, row)
 }

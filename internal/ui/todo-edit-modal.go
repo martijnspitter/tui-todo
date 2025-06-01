@@ -463,6 +463,9 @@ func (ts *TagSelector) Update(msg tea.Msg) (*TagSelector, tea.Cmd) {
 				return ts, GoToNextEditState()
 			}
 		case key.Matches(msg, ts.tuiService.KeyMap.Select):
+			if ts.cursor < 0 || ts.cursor >= len(ts.availableTags) {
+				return ts, nil
+			}
 			// Toggle selected status of the current tag
 			currentTag := ts.availableTags[ts.cursor]
 			if ts.IsSelected(currentTag.Name) {
@@ -488,14 +491,13 @@ func (ts *TagSelector) IsSelected(tag string) bool {
 }
 
 func (ts *TagSelector) View() string {
-	var sb strings.Builder
 
 	if len(ts.availableTags) == 0 {
-		sb.WriteString("No tags available.")
-		return sb.String()
+		return ts.translator.T("feedback.no_tags_available")
 	}
 
-	sb.WriteString("Select tags:\n\n")
+	var sb strings.Builder
+	sb.WriteString(ts.translator.T("feedback.no_tags_available") + "\n\n")
 
 	for i, tag := range ts.availableTags {
 		cursor := " "

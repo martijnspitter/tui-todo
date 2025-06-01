@@ -14,14 +14,6 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/theme"
 )
 
-type tagState int
-
-const (
-	browsingTags tagState = iota
-	creatingTag
-	deletingTag
-)
-
 // TagEditModal allows viewing and managing tags
 type TagEditModal struct {
 	tag               *models.Tag
@@ -168,7 +160,7 @@ func (m *TagEditModal) saveChangesCmd() tea.Cmd {
 	return func() tea.Msg {
 		name := m.nameInput.Value()
 		if name == "" {
-			return TodoErrorMsg{err: fmt.Errorf("tag name cannot be empty")}
+			return TodoErrorMsg{err: fmt.Errorf(m.translator.T("error.tag_name_empty"))}
 		}
 
 		if m.tag.ID >= 0 {

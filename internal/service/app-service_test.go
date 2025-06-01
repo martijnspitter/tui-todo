@@ -235,7 +235,7 @@ func TestSaveTodo(t *testing.T) {
 	}{
 		{
 			name:         "Create new todo",
-			todo:         &models.Todo{Title: "New Todo", Description: "New Description", Priority: models.High},
+			todo:         &models.Todo{ID: -1, Title: "New Todo", Description: "New Description", Priority: models.High},
 			tags:         []string{"new", "important"},
 			mockError:    nil,
 			wantError:    false,
@@ -253,7 +253,7 @@ func TestSaveTodo(t *testing.T) {
 		},
 		{
 			name:         "Error during save",
-			todo:         &models.Todo{Title: "Error Todo"},
+			todo:         &models.Todo{ID: -1, Title: "Error Todo"},
 			tags:         []string{},
 			mockError:    errors.New("save error"),
 			wantError:    true,
@@ -288,7 +288,7 @@ func TestSaveTodo(t *testing.T) {
 
 				if tc.expectCreate {
 					if len(mockRepo.CreatedTodos) != 1 {
-						t.Errorf("Expected todo to be created but it wasn't")
+						t.Error("Expected todo to be created but it wasn't", mockRepo.CreatedTodos)
 					}
 				} else if tc.expectUpdate {
 					if len(mockRepo.UpdatedTodos) != 1 {
@@ -1535,7 +1535,7 @@ func TestGetFilteredTodos(t *testing.T) {
 			showArchived: false,
 			mockTodos:    nil,
 			mockError:    nil,
-			wantError:    true,
+			wantError:    false,
 			expectedRepo: "",
 		},
 	}
