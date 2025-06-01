@@ -15,7 +15,7 @@ type BaseModel struct {
 }
 
 func NewBaseModel(service *service.AppService, translationService *i18n.TranslationService) *BaseModel {
-	todoModel := NewTodosModel(service, translationService)
+	todoModel := NewMainModel(service, translationService)
 	toastOverlay := NewToastOverlay(todoModel)
 	return &BaseModel{
 		toastOverlay: toastOverlay,
@@ -24,7 +24,7 @@ func NewBaseModel(service *service.AppService, translationService *i18n.Translat
 }
 
 func (m *BaseModel) Init() tea.Cmd {
-	return InitCmd
+	return tea.Batch(InitTodosCmd(), InitTagsCmd())
 }
 
 func (m *BaseModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

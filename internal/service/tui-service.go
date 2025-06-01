@@ -13,7 +13,9 @@ const (
 	DonePane
 	BlockedPane
 	AllPane
-	AddEditModal
+	TagsPane
+	AddEditTodoModal
+	AddEditTagModal
 	ConfirmDeleteModal
 	UpdateModal
 	AboutModal
@@ -66,6 +68,8 @@ func (t *TuiService) SwitchPane(key string) {
 		t.CurrentView = BlockedPane
 	case "6":
 		t.CurrentView = AllPane
+	case "7":
+		t.CurrentView = TagsPane
 	}
 }
 
@@ -98,6 +102,14 @@ func (t *TuiService) RemoveNameFilter() {
 	t.FilterState.FilterMode = FilterByTitle
 }
 
+func (t *TuiService) IsTodoView() bool {
+	return t.CurrentView == OpenPane ||
+		t.CurrentView == DoingPane ||
+		t.CurrentView == DonePane ||
+		t.CurrentView == BlockedPane ||
+		t.CurrentView == AllPane
+}
+
 func (t *TuiService) SwitchToListView() {
 	if t.isPrevViewATab() {
 		t.CurrentView = t.PrevView
@@ -106,9 +118,18 @@ func (t *TuiService) SwitchToListView() {
 	}
 }
 
+func (t *TuiService) SwitchToTagsView() {
+	t.CurrentView = TagsPane
+}
+
 func (t *TuiService) SwitchToEditTodoView() {
 	t.PrevView = t.CurrentView
-	t.CurrentView = AddEditModal
+	t.CurrentView = AddEditTodoModal
+}
+
+func (t *TuiService) SwitchToEditTagView() {
+	t.PrevView = t.CurrentView
+	t.CurrentView = AddEditTagModal
 }
 
 func (t *TuiService) SwitchToConfirmDeleteView() {
@@ -117,7 +138,8 @@ func (t *TuiService) SwitchToConfirmDeleteView() {
 }
 
 func (t *TuiService) ShouldShowModal() bool {
-	return (t.CurrentView == AddEditModal ||
+	return (t.CurrentView == AddEditTodoModal ||
+		t.CurrentView == AddEditTagModal ||
 		t.CurrentView == ConfirmDeleteModal ||
 		t.CurrentView == UpdateModal ||
 		t.CurrentView == AboutModal)
@@ -130,7 +152,7 @@ func (t *TuiService) ToggleArchivedInAllView() {
 }
 
 func (t *TuiService) isPrevViewATab() bool {
-	return t.PrevView == TodayPane || t.PrevView == OpenPane || t.PrevView == DoingPane || t.PrevView == DonePane || t.PrevView == AllPane || t.PrevView == BlockedPane
+	return t.PrevView == TodayPane || t.PrevView == OpenPane || t.PrevView == DoingPane || t.PrevView == DonePane || t.PrevView == AllPane || t.PrevView == BlockedPane || t.PrevView == TagsPane
 }
 
 var (
@@ -150,6 +172,15 @@ func (t *TuiService) DetermineMaxWidthsForTodo(screenWidth, requiredItemsWidth, 
 	remainderW := availableW - leftW - float64(dueDateWidth)
 
 	return int(titleW), int(descriptionW), int(leftW), int(remainderW)
+}
+
+func (t *TuiService) DetermineMaxWidthsForTag(screenWidth, requiredItemsWidth int) (nameWidth, descriptionWidth int) {
+	availableW := float64(screenWidth - requiredItemsWidth)
+
+	nameW := max(availableW*maxWidthTitleRatio, minWidthTitle)
+	descriptionW := max((availableW-nameW)*maxWidthDescRatio, minWidthDesc)
+
+	return int(nameW), int(descriptionW)
 }
 
 func (t *TuiService) SwitchToUpdateModalView() {

@@ -539,6 +539,114 @@ func (r *SQLiteTodoRepository) FindTodosByTag(tagName string) ([]*models.Todo, e
 	return todos, nil
 }
 
+// GetAllTags returns all tags in the system
+func (r *SQLiteTodoRepository) GetAllTags() ([]*models.Tag, error) {
+	rows, err := r.db.Query(`
+		SELECT id, name, description, created_at, updated_at
+		FROM tags
+		ORDER BY name
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []*models.Tag
+	for rows.Next() {
+		tag := &models.Tag{}
+		var description sql.NullString
+		if err := rows.Scan(&tag.ID, &tag.Name, &description, &tag.CreatedAt, &tag.UpdatedAt); err != nil {
+			return nil, err
+		}
+		// Convert NULL to empty string
+		if description.Valid {
+			tag.Description = description.String
+		} else {
+			tag.Description = ""
+		}
+		tags = append(tags, tag)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return tags, nil
+}
+
+// DeleteTag removes a tag from the system
+func (r *SQLiteTodoRepository) DeleteTag(id int64) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Delete from tags table (will cascade to todo_tags)
+	_, err = tx.Exec("DELETE FROM tags WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+// UpdateTag updates an existing tag
+func (r *SQLiteTodoRepository) UpdateTag(tag *models.Tag) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Update the timestamp
+	tag.UpdatedAt = time.Now()
+
+	stmt, err := tx.Prepare("UPDATE tags SET name = ?, description = ?, updated_at = ? WHERE id = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(tag.Name, tag.Description, tag.UpdatedAt, tag.ID)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// CreateTag creates a new tag in the system
+func (r *SQLiteTodoRepository) CreateTag(tag *models.Tag) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Set timestamps
+	now := time.Now()
+	tag.CreatedAt = now
+	tag.UpdatedAt = now
+
+	stmt, err := tx.Prepare("INSERT INTO tags (name, description, created_at, updated_at) VALUES (?, ?, ?, ?)")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	result, err := stmt.Exec(tag.Name, tag.Description, tag.CreatedAt, tag.UpdatedAt)
+	if err != nil {
+		return err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return err
+	}
+
+	tag.ID = id
+	return tx.Commit()
+}
+
 func initSchema(db *sql.DB) error {
 	_, err := db.Exec(`
         CREATE TABLE IF NOT EXISTS todos (
@@ -563,7 +671,10 @@ func initSchema(db *sql.DB) error {
 	_, err = db.Exec(`
         CREATE TABLE IF NOT EXISTS tags (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE
+            name TEXT NOT NULL UNIQUE,
+            description TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
     `)
 	if err != nil {

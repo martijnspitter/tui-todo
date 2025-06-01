@@ -53,14 +53,14 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 	contextKeyMap := keys.NewHelpKeyMap(m.translator)
 
 	// Always show these keys regardless of context when not filtering
-	if !filterState.IsFilterActive && currentView != service.AddEditModal && currentView != service.AboutModal {
+	if !filterState.IsFilterActive && currentView != service.AddEditTodoModal && currentView != service.AddEditTagModal && currentView != service.AboutModal {
 		contextKeyMap.AddBindingInShort(baseKeyMap.Help)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Quit)
 	}
 
 	// Add view-specific bindings
 	switch currentView {
-	case service.OpenPane, service.DoingPane, service.DonePane, service.AllPane:
+	case service.OpenPane, service.DoingPane, service.DonePane, service.AllPane, service.BlockedPane:
 		if filterState.IsFilterActive {
 			contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
 		} else {
@@ -92,13 +92,37 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 			contextKeyMap.AddBindingInShort(baseKeyMap.ToggleArchived)
 			contextKeyMap.AddBindingInFull(baseKeyMap.ToggleArchived)
 		}
+	case service.TagsPane:
+		// Tags view shows tag-specific keys
+		contextKeyMap.AddBindingInShort(baseKeyMap.New)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Filter)
 
-	case service.AddEditModal:
+		contextKeyMap.AddBindingInFull(baseKeyMap.Up)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Down)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Filter)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Help)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Home)
+		contextKeyMap.AddBindingInFull(baseKeyMap.End)
+
+		contextKeyMap.AddBindingInFull(baseKeyMap.SwitchPane)
+
+		contextKeyMap.AddBindingInFull(baseKeyMap.New)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Edit)
+		contextKeyMap.AddBindingInFull(baseKeyMap.Delete)
+
+		contextKeyMap.AddBindingInFull(baseKeyMap.About)
+	case service.AddEditTodoModal:
 		// Edit view shows edit-specific keys
 		contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Next)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Prev)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Select)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Save)
+
+	case service.AddEditTagModal:
+		contextKeyMap.AddBindingInShort(baseKeyMap.Next)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Prev)
+		contextKeyMap.AddBindingInShort(baseKeyMap.Cancel)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Save)
 
 	case service.ConfirmDeleteModal:

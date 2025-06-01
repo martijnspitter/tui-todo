@@ -40,8 +40,8 @@ func DefaultKeyMap() KeyMap {
 			key.WithHelp("left/shift+tab", "help.left_shift_tab"),
 		),
 		SwitchPane: key.NewBinding(
-			key.WithKeys("1", "2", "3", "4", "5", "6"),
-			key.WithHelp("1-6", "help.pane"),
+			key.WithKeys("1", "2", "3", "4", "5", "6", "7"),
+			key.WithHelp("1-7", "help.pane"),
 		),
 		Select: key.NewBinding(
 			key.WithKeys("enter"),

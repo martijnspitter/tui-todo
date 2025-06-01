@@ -56,7 +56,7 @@ func (s *AppService) SetSyncManager(manager *socket_sync.Manager) {
 // ===========================================================================
 func (s *AppService) SaveTodo(todo *models.Todo, tags []string) error {
 	// Service decides whether to create or update based on ID or other criteria
-	if todo.ID == 0 {
+	if todo.ID < 0 {
 		// Create new
 		return s.CreateTodo(todo.Title, todo.Description, todo.Priority, tags, todo.DueDate, todo.Status)
 	} else {
@@ -314,6 +314,52 @@ func (s *AppService) RemoveTagFromTodo(todoID int64, tag string) error {
 	}
 
 	s.notify(socket_sync.TodoUpdated, todoID)
+
+	return nil
+}
+
+// GetAllTags returns all tags in the system
+func (s *AppService) GetAllTags() ([]*models.Tag, error) {
+	tags, err := s.todoRepo.GetAllTags()
+	if err != nil {
+		log.Error("Failed to get all tags", "error", err)
+		return nil, fmt.Errorf("error.tags_not_found")
+	}
+	return tags, nil
+}
+
+// CreateTag creates a new tag in the system
+func (s *AppService) CreateTag(tag *models.Tag) error {
+	// We can reuse the AddTagToTodo method with ID 0
+	// The tag will be created if it doesn't exist
+	err := s.todoRepo.CreateTag(tag)
+	if err != nil {
+		log.Error("Failed to create tag", "error", err, "tag", tag)
+		return fmt.Errorf("error.tag_create_failed")
+	}
+	return nil
+}
+
+// DeleteTag removes a tag from the system
+func (s *AppService) DeleteTag(id int64) error {
+	err := s.todoRepo.DeleteTag(id)
+	if err != nil {
+		log.Error("Failed to delete tag", "error", err, "tag", id)
+		return fmt.Errorf("error.tag_delete_failed")
+	}
+	return nil
+}
+
+func (s *AppService) UpdateTag(tag *models.Tag) error {
+	// Update the tag in the repository
+	err := s.todoRepo.UpdateTag(tag)
+	if err != nil {
+		log.Error("Failed to update tag", "error", err, "tag", tag.Name)
+		return fmt.Errorf("error.tag_update_failed")
+	}
+
+	// Notify that the tag has been updated
+	s.notify(socket_sync.TodoUpdated, tag.ID)
 
 	return nil
 }
@@ -682,7 +728,7 @@ func (s *AppService) GetFilteredTodos(currentView ViewType, showArchived bool) (
 	case AllPane:
 		todos, err = s.GetAllTodos(showArchived)
 	default:
-		err = fmt.Errorf("error.unknown")
+		log.Info("Unknown view", currentView)
 	}
 
 	if err != nil {

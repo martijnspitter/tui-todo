@@ -24,6 +24,10 @@ type TodoRepository interface {
 	// tags
 	AddTagToTodo(id int64, tagname string) error
 	RemoveTagFromTodo(id int64, tageName string) error
+	GetAllTags() ([]*models.Tag, error)
+	CreateTag(tag *models.Tag) error
+	DeleteTag(id int64) error
+	UpdateTag(tag *models.Tag) error
 }
 
 // Filter returns a WHERE clause fragment and associated arguments

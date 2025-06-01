@@ -16,6 +16,7 @@ import (
 	"github.com/martijnspitter/tui-todo/internal/service"
 	"github.com/martijnspitter/tui-todo/internal/styling"
 	"github.com/martijnspitter/tui-todo/internal/theme"
+	"slices"
 )
 
 type editState int
@@ -41,7 +42,7 @@ type TodoEditModal struct {
 	todo         *models.Todo
 	titleInput   textinput.Model
 	descInput    textarea.Model
-	tagsInput    textinput.Model
+	tagsInput    *TagSelector
 	dueDateInput textinput.Model
 	priority     models.Priority
 	status       models.Status
@@ -65,8 +66,14 @@ func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.
 	desc.SetValue(todo.Description)
 	desc.ShowLineNumbers = true
 
-	tagsInput := textinput.New()
-	tagsInput.SetValue(strings.Join(todo.Tags, ", "))
+	allTags, err := appService.GetAllTags()
+	if err != nil {
+		log.Error("Failed to load tags", "error", err)
+		allTags = []*models.Tag{}
+	}
+
+	// Create tag selector with selected tags
+	tagSelector := NewTagSelector(todo.Tags, allTags, tuiService, translationService)
 
 	dueDateInput := textinput.New()
 	dueDateInput.Placeholder = "YYYY-MM-DD HH:MM (e.g. 2023-12-31 15:30)"
@@ -78,7 +85,7 @@ func NewTodoEditModal(todo *models.Todo, width, height int, appService *service.
 		todo:         todo,
 		titleInput:   ti,
 		descInput:    desc,
-		tagsInput:    tagsInput,
+		tagsInput:    tagSelector,
 		dueDateInput: dueDateInput,
 		priority:     todo.Priority,
 		status:       todo.Status,
@@ -110,12 +117,15 @@ func (m *TodoEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, func() tea.Msg { return modalCloseMsg{reload: false} }
 
 		case key.Matches(msg, m.tuiService.KeyMap.Next):
-			// Cycle through edit states
-			m.goForward()
+			if m.editState != editingTags {
+				// Cycle through edit states
+				m.goForward()
+			}
 		case key.Matches(msg, m.tuiService.KeyMap.Prev):
-			// Cycle through edit states
-			m.goBack()
-
+			if m.editState != editingTags {
+				// Cycle through edit states
+				m.goBack()
+			}
 		case key.Matches(msg, m.tuiService.KeyMap.Select):
 			switch m.editState {
 			case editingPriorityLow:
@@ -145,6 +155,10 @@ func (m *TodoEditModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+	case GoBackMsg:
+		m.goBack()
+	case GoForwardMsg:
+		m.goForward()
 	}
 
 	// Update active input based on state
@@ -249,7 +263,7 @@ func (m *TodoEditModal) View() string {
 
 	updatedAtHeader := ""
 	updatedAt := ""
-	if m.todo.ID != 0 {
+	if m.todo.ID >= 0 {
 		updatedAtHeader = m.translator.T("field.updated_at")
 		translatedUpdatedAt := m.translator.Tf("ui.updated", map[string]interface{}{"Time": m.todo.UpdatedAt.Format(time.Stamp)})
 		updatedAtField := styling.GetStyledUpdatedAt(translatedUpdatedAt)
@@ -257,7 +271,7 @@ func (m *TodoEditModal) View() string {
 	}
 
 	header := m.translator.T("modal.new_todo")
-	if m.todo.ID != 0 {
+	if m.todo.ID >= 0 {
 		text := m.translator.Tf("modal.edit_todo", map[string]interface{}{"ID": m.todo.ID})
 		timeSpendText := m.translator.Tf("ui.time_spent", map[string]interface{}{"Time": m.todo.FormatTimeSpent()})
 		timeSpend := styling.GetTimeSpend(timeSpendText)
@@ -295,6 +309,9 @@ func (m *TodoEditModal) View() string {
 	return positioned
 }
 
+// ===========================================================================
+// Helpers
+// ===========================================================================
 func (m *TodoEditModal) goForward() {
 	switch m.editState {
 	case editingTitle:
@@ -328,7 +345,6 @@ func (m *TodoEditModal) goBack() {
 		m.titleInput.Focus()
 	case editingTags:
 		m.descInput.Focus()
-		m.tagsInput.Blur()
 	case editingDueDate:
 		m.tagsInput.Focus()
 		m.dueDateInput.Blur()
@@ -343,6 +359,15 @@ func (m *TodoEditModal) goBack() {
 	}
 }
 
+// ===========================================================================
+// Messages
+// ===========================================================================
+type GoBackMsg struct{}
+type GoForwardMsg struct{}
+
+// ===========================================================================
+// Commands
+// ===========================================================================
 func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 	return func() tea.Msg {
 		// Update todo with new values
@@ -365,15 +390,7 @@ func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 			m.todo.DueDate = &dueDate
 		}
 
-		// Handle tags (split by comma and trim)
-		rawTags := strings.Split(m.tagsInput.Value(), ",")
-		tags := make([]string, 0, len(rawTags))
-		for _, tag := range rawTags {
-			tag = strings.TrimSpace(tag)
-			if tag != "" {
-				tags = append(tags, tag)
-			}
-		}
+		tags := m.tagsInput.SelectedTags()
 
 		err := m.appService.SaveTodo(m.todo, tags)
 		if err != nil {
@@ -383,4 +400,122 @@ func (m *TodoEditModal) saveChangesCmd() tea.Cmd {
 		// Close modal and reload todos
 		return modalCloseMsg{reload: true}
 	}
+}
+
+func GoToPreviousEditState() tea.Cmd {
+	return func() tea.Msg {
+		return GoBackMsg{}
+	}
+}
+
+func GoToNextEditState() tea.Cmd {
+	return func() tea.Msg {
+		return GoForwardMsg{}
+	}
+}
+
+// ===========================================================================
+// Tag Selector
+// ===========================================================================
+type TagSelector struct {
+	selectedTags  []string
+	availableTags []*models.Tag
+	focused       bool
+	cursor        int
+	tuiService    *service.TuiService
+	translator    *i18n.TranslationService
+}
+
+func NewTagSelector(selectedTags []string, availableTags []*models.Tag, tuiService *service.TuiService, translator *i18n.TranslationService) *TagSelector {
+	return &TagSelector{
+		selectedTags:  selectedTags,
+		availableTags: availableTags,
+		cursor:        -1,
+		tuiService:    tuiService,
+		translator:    translator,
+	}
+}
+
+func (ts *TagSelector) Focus() {
+	ts.focused = true
+}
+
+func (ts *TagSelector) Blur() {
+	ts.focused = false
+}
+
+func (ts *TagSelector) Update(msg tea.Msg) (*TagSelector, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch {
+		case key.Matches(msg, ts.tuiService.KeyMap.Prev):
+			if ts.cursor > 0 {
+				ts.cursor--
+			} else {
+				ts.cursor = -1
+				return ts, GoToPreviousEditState()
+			}
+		case key.Matches(msg, ts.tuiService.KeyMap.Next):
+			if ts.cursor < len(ts.availableTags)-1 {
+				ts.cursor++
+			} else {
+				ts.cursor = len(ts.availableTags)
+				return ts, GoToNextEditState()
+			}
+		case key.Matches(msg, ts.tuiService.KeyMap.Select):
+			if ts.cursor < 0 || ts.cursor >= len(ts.availableTags) {
+				return ts, nil
+			}
+			// Toggle selected status of the current tag
+			currentTag := ts.availableTags[ts.cursor]
+			if ts.IsSelected(currentTag.Name) {
+				// Remove tag
+				for i, tag := range ts.selectedTags {
+					if tag == currentTag.Name {
+						ts.selectedTags = slices.Delete(ts.selectedTags, i, i+1)
+						break
+					}
+				}
+			} else {
+				// Add tag
+				ts.selectedTags = append(ts.selectedTags, currentTag.Name)
+			}
+		}
+	}
+
+	return ts, nil
+}
+
+func (ts *TagSelector) IsSelected(tag string) bool {
+	return slices.Contains(ts.selectedTags, tag)
+}
+
+func (ts *TagSelector) View() string {
+
+	if len(ts.availableTags) == 0 {
+		return ts.translator.T("feedback.no_tags_available")
+	}
+
+	var sb strings.Builder
+	sb.WriteString(ts.translator.T("field.select_tags") + "\n\n")
+
+	for i, tag := range ts.availableTags {
+		cursor := " "
+		if ts.focused && ts.cursor == i {
+			cursor = ">"
+		}
+
+		checked := "[ ]"
+		if ts.IsSelected(tag.Name) {
+			checked = "[✓]"
+		}
+
+		sb.WriteString(fmt.Sprintf("%s %s %s\n", cursor, checked, styling.GetStyledTag(tag.Name)))
+	}
+
+	return sb.String()
+}
+
+func (ts *TagSelector) SelectedTags() []string {
+	return ts.selectedTags
 }

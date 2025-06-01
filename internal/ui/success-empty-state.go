@@ -19,7 +19,7 @@ const trophy = `
      '""""""""'
      `
 
-func EmptyStateView(translator *i18n.TranslationService, width, height int) string {
+func EmptySuccessStateView(translator *i18n.TranslationService, width, height int) string {
 	emptyTitle := styling.EmptyStyle.Bold(true).Width(width).Align(lipgloss.Center).Render(translator.T("feedback.no_todos"))
 	emptySubTitle := styling.EmptyStyle.Bold(true).Width(width).Align(lipgloss.Center).Render(translator.T("feedback.mission_accomplished"))
 	trophyText := styling.EmptyStyle.PaddingRight(2).Render(trophy)
@@ -27,7 +27,7 @@ func EmptyStateView(translator *i18n.TranslationService, width, height int) stri
 
 	return lipgloss.Place(
 		width,
-		height,
+		height+2,
 		lipgloss.Center,
 		lipgloss.Center,
 		emptyState,
