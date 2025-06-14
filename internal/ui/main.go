@@ -353,28 +353,32 @@ func CloseModalCmd(reload bool) tea.Cmd {
 func (m *MainModel) showUpdateModalCmd() tea.Cmd {
 	return func() tea.Msg {
 		m.tuiService.SwitchToUpdateModalView()
-		m.modalComponent = NewUpdateModal(
+		modal := NewUpdateModal(
 			m.width,
 			m.height,
 			m.service,
 			m.tuiService,
 			m.translator,
 		)
-		return showModalMsg{}
+		return showModalMsg{
+			modal: modal,
+		}
 	}
 }
 
 func (m *MainModel) showAboutModalCmd() tea.Cmd {
 	return func() tea.Msg {
 		m.tuiService.SwitchToAboutModalView()
-		m.modalComponent = NewAboutModal(
+		modal := NewAboutModal(
 			m.width,
 			m.height,
 			m.service,
 			m.tuiService,
 			m.translator,
 		)
-		return showModalMsg{}
+		return showModalMsg{
+			modal: modal,
+		}
 	}
 }
 
