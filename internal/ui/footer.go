@@ -48,7 +48,9 @@ func (m *FooterModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, m.tuiService.KeyMap.Help):
-			m.help.(*HelpModel).ToggleShowAll()
+			if m.tuiService.CurrentView != service.TodayPane {
+				return m, ToggleShowAllHelpCmd()
+			}
 		}
 	}
 
@@ -58,7 +60,7 @@ func (m *FooterModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m.statusBar, cmd = m.statusBar.Update(msg)
 	cmds = append(cmds, cmd)
 
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
 func (m *FooterModel) View() string {

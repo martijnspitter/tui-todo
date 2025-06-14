@@ -33,7 +33,11 @@ func (m *HelpModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
+	case ToggleShowAllHelpMsg:
+		m.ToggleShowAll()
+		return m, ShowAllHelpToggledCmd()
 	}
+
 	return m, nil
 }
 
@@ -53,7 +57,7 @@ func (m *HelpModel) getContextualKeyMap() keys.HelpKeyMap {
 	contextKeyMap := keys.NewHelpKeyMap(m.translator)
 
 	// Always show these keys regardless of context when not filtering
-	if !filterState.IsFilterActive && currentView != service.AddEditTodoModal && currentView != service.AddEditTagModal && currentView != service.AboutModal {
+	if !filterState.IsFilterActive && currentView != service.AddEditTodoModal && currentView != service.AddEditTagModal && currentView != service.AboutModal && currentView != service.TodayPane {
 		contextKeyMap.AddBindingInShort(baseKeyMap.Help)
 		contextKeyMap.AddBindingInShort(baseKeyMap.Quit)
 	}
