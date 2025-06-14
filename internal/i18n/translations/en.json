@@ -54,6 +54,7 @@
   "toast.todo_created": "Todo created",
   "toast.todo_updated": "Todo updated",
   "toast.todo_deleted": "Todo deleted",
+  "toast.tag_deleted": "Tag deleted",
   "toast.status_changed": "Todo status changed to {{.Status}}",
   "toast.archived": "Todo archived",
   "toast.unarchived": "Todo unarchived",

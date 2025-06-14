@@ -90,8 +90,10 @@ func (m *ConfirmDeleteModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.deleteTag {
 				// If deleting a tag, call the deleteTagCmd
 				return m, m.deleteTagCmd()
+			} else {
+				// If deleting a todo, call the deleteTodoCmd
+				return m, m.deleteTodoCmd()
 			}
-			return m, m.deleteTodoCmd()
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
