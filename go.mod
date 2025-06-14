@@ -11,8 +11,8 @@ require (
 	github.com/charmbracelet/log v0.4.2
 	github.com/nicksnyder/go-i18n/v2 v2.6.0
 	github.com/rmhubbert/bubbletea-overlay v0.3.2
-	golang.org/x/text v0.25.0
-	modernc.org/sqlite v1.38.0
+	golang.org/x/text v0.26.0
+	modernc.org/sqlite v1.37.0
 	pgregory.net/rapid v1.2.0
 )
 
@@ -55,10 +55,10 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sahilm/fuzzy v0.1.1 // indirect
-	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0 // indirect
-	golang.org/x/sync v0.14.0 // indirect
-	golang.org/x/sys v0.33.0 // indirect
-	modernc.org/libc v1.65.10 // indirect
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
+	golang.org/x/sync v0.15.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
+	modernc.org/libc v1.62.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
