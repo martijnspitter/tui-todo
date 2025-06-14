@@ -142,6 +142,11 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, m.loadTodosCmd())
 		cmds = append(cmds, ShowDefaultToast(m.translator.T("toast.todo_deleted"), SuccessToast))
 
+	case tagDeletedMsg:
+		m.tuiService.SwitchToListView()
+		cmds = append(cmds, m.loadTagsCmd())
+		cmds = append(cmds, ShowDefaultToast(m.translator.T("toast.tag_deleted"), SuccessToast))
+
 	case todoStatusChangedMsg:
 		cmds = append(cmds, m.loadTodosCmd())
 		cmds = append(cmds, ShowDefaultToast(
