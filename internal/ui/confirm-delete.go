@@ -113,13 +113,17 @@ func (m *ConfirmDeleteModel) View() string {
 	// Render buttons with appropriate styles
 	cancelView := m.cancelButton.View()
 	sendView := m.sendButton.View()
+	text := m.translator.T("modal.confirm_delete")
+	if m.deleteTag {
+		text = m.translator.T("modal.confirm_delete_tag")
+	}
 
 	title := styling.
 		FocusedStyle.
 		Width(m.width / 2).
 		AlignHorizontal(lipgloss.Center).
 		MarginBottom(2).
-		Render(m.translator.T("modal.confirm_delete"))
+		Render(text)
 	buttons := styling.
 		FocusedStyle.
 		Width(m.width/2).
