@@ -90,8 +90,10 @@ func (m *ConfirmDeleteModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.deleteTag {
 				// If deleting a tag, call the deleteTagCmd
 				return m, m.deleteTagCmd()
+			} else {
+				// If deleting a todo, call the deleteTodoCmd
+				return m, m.deleteTodoCmd()
 			}
-			return m, m.deleteTodoCmd()
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -111,13 +113,17 @@ func (m *ConfirmDeleteModel) View() string {
 	// Render buttons with appropriate styles
 	cancelView := m.cancelButton.View()
 	sendView := m.sendButton.View()
+	text := m.translator.T("modal.confirm_delete")
+	if m.deleteTag {
+		text = m.translator.T("modal.confirm_delete_tag")
+	}
 
 	title := styling.
 		FocusedStyle.
 		Width(m.width / 2).
 		AlignHorizontal(lipgloss.Center).
 		MarginBottom(2).
-		Render(m.translator.T("modal.confirm_delete"))
+		Render(text)
 	buttons := styling.
 		FocusedStyle.
 		Width(m.width/2).

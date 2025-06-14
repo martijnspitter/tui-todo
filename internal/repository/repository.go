@@ -92,7 +92,7 @@ func CompletedTodayFilter() Filter {
 		now := time.Now()
 		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 
-		return "status = ? AND updated_at >= ?",
+		return "status = ? AND t.updated_at >= ?",
 			[]interface{}{models.Done, today}
 	}
 }
