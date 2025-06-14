@@ -118,9 +118,6 @@ func (m *MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 
-		m.footer, cmd = m.footer.Update(msg)
-		cmds = append(cmds, cmd)
-
 		// Pass size to modal if active
 		if m.tuiService.ShouldShowModal() && m.modalComponent != nil {
 			var cmd tea.Cmd
@@ -312,6 +309,9 @@ type LoadTagsMsg struct{}
 
 type RemoveFilterMsg struct{}
 
+type ToggleShowAllHelpMsg struct{}
+type ShowAllHelpToggledMsg struct{}
+
 // ===========================================================================
 // Commands
 // ===========================================================================
@@ -402,5 +402,17 @@ func InitTagsCmd() tea.Cmd {
 func RemoveFilterCmd() tea.Cmd {
 	return func() tea.Msg {
 		return RemoveFilterMsg{}
+	}
+}
+
+func ToggleShowAllHelpCmd() tea.Cmd {
+	return func() tea.Msg {
+		return ToggleShowAllHelpMsg{}
+	}
+}
+
+func ShowAllHelpToggledCmd() tea.Cmd {
+	return func() tea.Msg {
+		return ShowAllHelpToggledMsg{}
 	}
 }
